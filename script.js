@@ -1,21 +1,13 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
-import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 
 /* ============================================================
-   Modern Residential Architecture 3D — Multi-Format & Complete
+   Modern Residential Architecture 3D — 100% Solid & Accurate
    ============================================================ */
 
 const CONFIG = {
-  glbPath: "Untitled.glb?v=6",
-  fallbackGlbPath: "Untitled(1).glb?v=6",
-  objPath: "Untitled.obj?v=6",
-  mtlPath: "Untitled.mtl?v=6",
-  fbxPath: "Untitled.fbx?v=6",
+  modelPath: "Untitled.obj?v=13",
   camera: { fov: 36, near: 0.1, far: 500 },
 };
 
@@ -39,14 +31,12 @@ const DOM = {
   btnToggleInfo: document.getElementById("btn-toggle-info"),
   infoCard: document.querySelector(".property-card"),
   toast: document.getElementById("toast"),
-  tabButtons: document.querySelectorAll(".tab-btn"),
 };
 
 let scene, camera, renderer, controls, model;
 let initialCamState;
 let frameCount = 0;
 let lastFpsTime = performance.now();
-let currentFormat = "glb";
 
 /* ---------- 1) إعداد المشهد والـ Renderer ---------- */
 function initScene() {
@@ -73,7 +63,7 @@ function initScene() {
 
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.16;
+  renderer.toneMappingExposure = 1.18;
 
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -85,15 +75,15 @@ function initScene() {
   window.addEventListener("resize", onResize);
 }
 
-/* ---------- 2) إضاءة الاستوديو المعمارية 360 درجة ---------- */
+/* ---------- 2) إضاءة الاستوديو المعمارية 360 درجة مع إضاءة خاصة للسطح ---------- */
 function setupLighting() {
   // 1. إضاءة القبة السماوية المتوازنة (Hemisphere Light)
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8294a5, 2.0);
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8294a5, 2.2);
   hemiLight.position.set(0, 60, 0);
   scene.add(hemiLight);
 
   // 2. ضوء الشمس الرئيسي من الأمام والأعلى مع الظلال الناعمة
-  const sunLight = new THREE.DirectionalLight(0xffffff, 2.4);
+  const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
   sunLight.position.set(32, 48, 28);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
@@ -124,7 +114,7 @@ function setupLighting() {
   scene.add(rightLight);
 
   // 6. ضوء علوي مباشر لإظهار كل تفاصيل السطح والمداخن والمواسير الفضية
-  const topLight = new THREE.DirectionalLight(0xffffff, 1.4);
+  const topLight = new THREE.DirectionalLight(0xffffff, 1.5);
   topLight.position.set(0, 50, 0);
   scene.add(topLight);
 
@@ -165,7 +155,7 @@ function setupControls() {
   controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 }
 
-/* ---------- 3) تحميل الموديلات بجميع الصيغ (GLB / OBJ / FBX) ---------- */
+/* ---------- 3) تحميل الموديل المعماري الكامل ---------- */
 function updateStatus(text) {
   if (DOM.loaderStatus) DOM.loaderStatus.textContent = text;
 }
@@ -197,223 +187,182 @@ function removeCurrentModel() {
   }
 }
 
-/* 1. تحميل بصيغة GLB */
-function loadGLB(path = CONFIG.glbPath) {
-  showLoader("جاري تحميل مجسم المبنى بصيغة GLB PBR…");
+function loadModel() {
+  showLoader("جاري تحميل مجسم المبنى والخامات المعمارية المصمتة…");
 
-  const loader = new GLTFLoader();
-
+  const loader = new OBJLoader();
   loader.load(
-    path,
-    (gltf) => {
+    CONFIG.modelPath,
+    (object) => {
       removeCurrentModel();
-      model = gltf.scene;
+      model = object;
 
       applyArchitecturalMaterials(model);
       centerAndFrameModel(model);
 
       scene.add(model);
       finishLoading();
-      showToast("✓ تم تحميل المبنى بصيغة GLB بنجاح!");
+      showToast("✓ تم تحميل المبنى بجدرانه البيضاء وتفاصيله بالكامل بنجاح!");
     },
     (xhr) => {
       if (xhr.lengthComputable && xhr.total > 0) {
         updateProgress(xhr.loaded / xhr.total, xhr.loaded, xhr.total);
       } else if (xhr.loaded > 0) {
-        const estTotal = 8 * 1024 * 1024;
+        const estTotal = 18 * 1024 * 1024;
         updateProgress(Math.min(0.96, xhr.loaded / estTotal), xhr.loaded, estTotal);
       }
     },
     (err) => {
-      console.warn("[GLTFLoader Error]", err);
-      if (path !== CONFIG.fallbackGlbPath) {
-        loadGLB(CONFIG.fallbackGlbPath);
-      } else {
-        showError("تعذر تحميل ملف GLB: " + (err.message || err));
-      }
+      console.error("[Loader Error]", err);
+      showError("تعذر تحميل ملف الموديل: " + (err.message || err));
     }
   );
 }
 
-/* 2. تحميل بصيغة OBJ + MTL */
-function loadOBJ() {
-  showLoader("جاري قراءة خامات ومجسم المبنى بصيغة OBJ + MTL…");
-
-  const mtlLoader = new MTLLoader();
-  mtlLoader.load(
-    CONFIG.mtlPath,
-    (materials) => {
-      materials.preload();
-      const objLoader = new OBJLoader();
-      objLoader.setMaterials(materials);
-      objLoader.load(
-        CONFIG.objPath,
-        (object) => {
-          removeCurrentModel();
-          model = object;
-          applyArchitecturalMaterials(model);
-          centerAndFrameModel(model);
-          scene.add(model);
-          finishLoading();
-          showToast("✓ تم تحميل المبنى بصيغة OBJ بنجاح!");
-        },
-        (xhr) => {
-          if (xhr.lengthComputable) {
-            updateProgress(xhr.loaded / xhr.total, xhr.loaded, xhr.total);
-          }
-        },
-        (err) => {
-          console.error("[OBJLoader Error]", err);
-          showError("تعذر تحميل ملف OBJ");
-        }
-      );
-    },
-    null,
-    () => {
-      // تحميل OBJ بدون MTL
-      const objLoader = new OBJLoader();
-      objLoader.load(CONFIG.objPath, (object) => {
-        removeCurrentModel();
-        model = object;
-        applyArchitecturalMaterials(model);
-        centerAndFrameModel(model);
-        scene.add(model);
-        finishLoading();
-      });
-    }
-  );
-}
-
-/* 3. تحميل بصيغة FBX */
-function loadFBX() {
-  showLoader("جاري تحميل مجسم المبنى بصيغة FBX…");
-
-  const fbxLoader = new FBXLoader();
-  fbxLoader.load(
-    CONFIG.fbxPath,
-    (object) => {
-      removeCurrentModel();
-      model = object;
-      applyArchitecturalMaterials(model);
-      centerAndFrameModel(model);
-      scene.add(model);
-      finishLoading();
-      showToast("✓ تم تحميل المبنى بصيغة FBX بنجاح!");
-    },
-    (xhr) => {
-      if (xhr.lengthComputable) {
-        updateProgress(xhr.loaded / xhr.total, xhr.loaded, xhr.total);
-      }
-    },
-    (err) => {
-      console.error("[FBXLoader Error]", err);
-      showError("تعذر تحميل ملف FBX: " + (err.message || err));
-    }
-  );
-}
-
-/* تطبيق الخامات المعمارية بدقة متناهية 100% */
+/* تطبيق الخامات المعمارية الدقيقة والمطابقة لصورة الموديل 100% */
 function applyArchitecturalMaterials(object) {
+  // خامات مسبقة الصنع فائقة الدقة
+  const matWhiteWall = new THREE.MeshStandardMaterial({
+    color: 0xfcfdff, // أبيض نقي ناصع مصمت
+    roughness: 0.88,
+    metalness: 0.0,
+    side: THREE.DoubleSide,
+  });
+
+  const matWoodBalcony = new THREE.MeshStandardMaterial({
+    color: 0xc4975e, // خشب طبيعي دافئ
+    roughness: 0.52,
+    metalness: 0.02,
+    side: THREE.DoubleSide,
+  });
+
+  const matDarkBase = new THREE.MeshStandardMaterial({
+    color: 0x353b44, // رمادي داكن معماري
+    roughness: 0.82,
+    metalness: 0.04,
+    side: THREE.DoubleSide,
+  });
+
+  const matAccentBand = new THREE.MeshStandardMaterial({
+    color: 0x363c46, // رمادي غامق لأشرطة النوافذ
+    roughness: 0.85,
+    metalness: 0.02,
+    side: THREE.DoubleSide,
+  });
+
+  const matRoofSurface = new THREE.MeshStandardMaterial({
+    color: 0x2e333b, // رمادي السطح والكورنيش
+    roughness: 0.72,
+    metalness: 0.15,
+    side: THREE.DoubleSide,
+  });
+
+  const matSilverPipes = new THREE.MeshStandardMaterial({
+    color: 0xe4ebf2, // فضي كروم عاكس
+    metalness: 0.95,
+    roughness: 0.14,
+    envMapIntensity: 2.5,
+    side: THREE.DoubleSide,
+  });
+
+  const matBlackChimney = new THREE.MeshStandardMaterial({
+    color: 0x20242a, // أسود مطفي للمداخن
+    roughness: 0.55,
+    metalness: 0.2,
+    side: THREE.DoubleSide,
+  });
+
+  const matGlass = new THREE.MeshPhysicalMaterial({
+    color: 0xd0e2ec,
+    transparent: true,
+    opacity: 0.38,
+    roughness: 0.04,
+    metalness: 0.15,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  const matDarkFrame = new THREE.MeshStandardMaterial({
+    color: 0x22252a,
+    roughness: 0.45,
+    metalness: 0.7,
+    side: THREE.DoubleSide,
+  });
+
+  const matSidewalk = new THREE.MeshStandardMaterial({
+    color: 0xcfc8ba,
+    roughness: 0.78,
+    metalness: 0.02,
+    side: THREE.DoubleSide,
+  });
+
   object.traverse((child) => {
     if (!child.isMesh) return;
+
+    const meshName = (child.name || "").toLowerCase();
+
+    // 1. إخفاء خيوط الستائر والستائر لمنع خطوط الوايرفريم
+    if (meshName.startsWith("string") || meshName.startsWith("venetian") || meshName.includes("string") || meshName.startsWith("plane.00") || meshName.startsWith("plane.010") || meshName.startsWith("plane.014") || meshName.startsWith("plane.015") || meshName.startsWith("plane.016") || meshName.startsWith("plane.017")) {
+      child.visible = false;
+      return;
+    }
 
     child.castShadow = true;
     child.receiveShadow = true;
     child.frustumCulled = true;
 
-    const meshName = (child.name || "").toLowerCase();
-    const mats = Array.isArray(child.material) ? child.material : [child.material];
-
-    mats.forEach((mat) => {
-      if (!mat) return;
-      const matName = (mat.name || "").toLowerCase();
-
-      mat.envMapIntensity = 1.0;
-
-      if (mat.map) {
-        mat.map.colorSpace = THREE.SRGBColorSpace;
-        mat.map.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
-      }
-
-      // 1. الحيطان العلوية الرئيسية (White Architectural Plaster) - أبيض ناصع نقي 100%
-      if (matName.includes("plaster") && !matName.includes("plaster.002") || matName.startsWith("concrete.0")) {
-        mat.color.setHex(0xfcfdff);
-        mat.roughness = 0.88;
-        mat.metalness = 0.0;
-        mat.normalMap = null;
-        mat.transparent = false;
-        mat.opacity = 1.0;
-      }
-      // 2. خشب البلكونات وتجويف المدخل - خشب باركيه طبيعي دافئ
-      else if (matName.includes("wood")) {
-        mat.roughness = 0.52;
-        mat.metalness = 0.02;
-        mat.envMapIntensity = 0.9;
-      }
-      // 3. الدور الأرضي والأساسات (Ground Floor Base) - رمادي داكن معماري أنيق
-      else if (matName === "concrete" && (meshName.includes("fundament") || meshName.includes("cube.006") || meshName.includes("cube.039") || meshName.includes("cube.001"))) {
-        mat.color.setHex(0x353b44);
-        mat.roughness = 0.82;
-        mat.metalness = 0.04;
-      }
-      // 4. شرائط النوافذ الجانبية والخلفية الغامقة (Accent window bands)
-      else if (matName.includes("plaster.002")) {
-        mat.color.setHex(0x363c46);
-        mat.roughness = 0.85;
-        mat.metalness = 0.02;
-      }
-      // 5. أنابيب التهوية الفضية فوق المداخن بالسطح (Shiny Silver Vent Pipes on Roof)
-      else if (meshName.includes("cylinder.004") || meshName.includes("cylinder.005") || meshName.includes("cylinder.006") || meshName.includes("cylinder.007") || meshName.includes("cylinder.001") || meshName.includes("cylinder.002") || meshName.includes("cylinder.003") || matName.includes("steel dirty")) {
-        mat.color.setHex(0xe4ebf2);
-        mat.metalness = 0.95;
-        mat.roughness = 0.14;
-        mat.envMapIntensity = 2.4;
-      }
-      // 6. المداخن الثلاثة بالسطح (3 Black Roof Chimneys)
-      else if (meshName.includes("cylinder.008") || meshName.includes("cylinder.010") || meshName.includes("cylinder.011") || meshName.includes("cylinder.012") || meshName.includes("cylinder.020") || meshName.includes("cylinder.022") || meshName.includes("cylinder.023") || meshName.includes("cylinder.024") || matName.includes("black")) {
-        mat.color.setHex(0x20242a);
-        mat.roughness = 0.55;
-        mat.metalness = 0.2;
-      }
-      // 7. سطح المبنى وإطار الكورنيش (Roof Surface & Perimeter Cornice Trim)
-      else if (matName.includes("roof") || matName.includes("schody") || meshName.includes("cube.010") || meshName.includes("cube.021")) {
-        mat.color.setHex(0x2e333b);
-        mat.roughness = 0.72;
-        mat.metalness = 0.15;
-      }
-      // 8. الزجاج والواجهة الزجاجية وبلكونات الزجاج (Glass Panels)
-      else if (matName.includes("glass") || mat.transmission > 0) {
-        mat.color.setHex(0xd0e2ec);
-        mat.transparent = true;
-        mat.opacity = 0.38;
-        mat.roughness = 0.04;
-        mat.metalness = 0.15;
-        mat.depthWrite = false;
-        mat.side = THREE.DoubleSide;
-        mat.envMapIntensity = 1.6;
-      }
-      // 9. الستائر الداخلية خلف النوافذ (Curtains & Blinds)
-      else if (matName.includes("curtin") || matName.includes("venetian") || matName.includes("string")) {
-        mat.transparent = false;
-        mat.opacity = 1.0;
-        mat.roughness = 0.7;
-        mat.metalness = 0.0;
-      }
-      // 10. إطارات النوافذ والأبواب والدرابزين الأسود (Black Window Frames & Railings)
-      else if (matName.includes("pvc") || matName.includes("steel") || matName.includes("barierka")) {
-        mat.color.setHex(0x22252a);
-        mat.roughness = 0.45;
-        mat.metalness = 0.7;
-        mat.side = THREE.DoubleSide;
-      }
-      // 11. الرصيف والأرضية المحيطة (Sidewalk Paving Slabs & Gravel)
-      else if (matName.includes("pavingstone") || matName.includes("cobblestone") || matName.includes("tiles") || matName.includes("floor")) {
-        mat.roughness = 0.75;
-        mat.metalness = 0.02;
-      }
-
-      mat.needsUpdate = true;
-    });
+    // 2. الجدران الرئيسية (الأدوار العلوية) - مصفوفة الخامات الأربعة
+    if (meshName === "walls") {
+      child.material = [
+        matWhiteWall,    // 0: PLASTER (الحيطان البيضاء)
+        matWhiteWall,    // 1: PLASTER.001 (حوائط الشبابيك البيضاء)
+        matWoodBalcony,  // 2: WOOD.001 (خشب البلكونات)
+        matSidewalk      // 3: tiles (أرضية البلكونات)
+      ];
+    }
+    // 3. الدور الأرضي والأساسات
+    else if (meshName === "fundament") {
+      child.material = [
+        matDarkBase,     // 0: Concrete (الرمادي الداكن)
+        matDarkBase,     // 1: floor
+        matSidewalk      // 2: tiles
+      ];
+    }
+    // 4. أشرطة النوافذ الغامقة
+    else if (meshName === "cube.003" || meshName === "cube.005" || meshName === "cube.017" || meshName === "cube.018") {
+      child.material = matAccentBand;
+    }
+    // 5. أنابيب التهوية الفضية بالسطح
+    else if (meshName.includes("cylinder.004") || meshName.includes("cylinder.005") || meshName.includes("cylinder.006") || meshName.includes("cylinder.007") || meshName.includes("cylinder.001") || meshName.includes("cylinder.002") || meshName.includes("cylinder.003") || meshName === "cylinder") {
+      child.material = matSilverPipes;
+    }
+    // 6. المداخن الثلاثة بالسطح
+    else if (meshName.includes("cylinder.008") || meshName.includes("cylinder.010") || meshName.includes("cylinder.011") || meshName.includes("cylinder.012") || meshName.includes("cylinder.020") || meshName.includes("cylinder.022") || meshName.includes("cylinder.023") || meshName.includes("cylinder.024")) {
+      child.material = matBlackChimney;
+    }
+    // 7. سطح المبنى وكورنيش السطح
+    else if (meshName.includes("cube.010") || meshName.includes("cube.021") || meshName.includes("schody")) {
+      child.material = matRoofSurface;
+    }
+    // 8. الزجاج
+    else if (meshName.includes("barierka.012") || meshName.includes("barierka.013") || meshName.includes("barierka.014") || meshName.includes("barierka.015") || meshName.includes("barierka.016") || meshName.includes("barierka.017") || meshName.includes("barierka.018") || meshName.includes("barierka.019") || meshName.includes("barierka.020") || meshName.includes("barierka.021") || meshName.includes("barierka.022") || meshName.includes("barierka.023")) {
+      child.material = matGlass;
+    }
+    // 9. إطارات النوافذ والأبواب والدرابزين الأسود
+    else if (meshName.includes("window") || meshName.includes("pvc") || meshName.includes("barierka") || meshName.includes("steel")) {
+      child.material = matDarkFrame;
+    }
+    // 10. الرصيف
+    else if (meshName === "plane") {
+      child.material = matSidewalk;
+    }
+    // 11. باقي الجدران والعناصر العلوية
+    else if (meshName.startsWith("cube.04") || meshName.startsWith("cube.05")) {
+      child.material = matWhiteWall;
+    }
+    else {
+      child.material = matWhiteWall;
+    }
   });
 }
 
@@ -512,19 +461,6 @@ function onResize() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 }
 
-function switchFormat(format) {
-  if (currentFormat === format) return;
-  currentFormat = format;
-
-  DOM.tabButtons.forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.format === format);
-  });
-
-  if (format === "glb") loadGLB();
-  else if (format === "obj") loadOBJ();
-  else if (format === "fbx") loadFBX();
-}
-
 function initUI() {
   DOM.btnRotate?.addEventListener("click", () => {
     controls.autoRotate = !controls.autoRotate;
@@ -559,18 +495,12 @@ function initUI() {
     DOM.infoCard.classList.toggle("collapsed");
     DOM.btnToggleInfo.textContent = DOM.infoCard.classList.contains("collapsed") ? "+" : "−";
   });
-
-  DOM.tabButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      switchFormat(btn.dataset.format);
-    });
-  });
 }
 
 /* ---------- 6) التشغيل ---------- */
 try {
   initScene();
-  loadGLB();
+  loadModel();
   initUI();
   animate();
 } catch (err) {
