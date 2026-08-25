@@ -1,42 +1,71 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 /* ============================================================
-   Villa 3D Viewer — FBX version (villa+fbx.fbx)
+   Modern Residential Architecture 3D — Ultra-Fast 60 FPS & Realistic PBR
    ============================================================ */
 
 const CONFIG = {
-  fbxPath: "villa+fbx.fbx",
-  camera: { fov: 55, near: 0.05, far: 8000 },
+  modelPath: "Untitled.glb",
+  camera: { fov: 40, near: 0.2, far: 400 },
 };
 
 const DOM = {
   loader: document.getElementById("loader"),
+  loaderStatus: document.getElementById("loader-status"),
   progressBar: document.getElementById("progress-bar"),
   progressText: document.getElementById("progress-text"),
+  progressDetail: document.getElementById("progress-detail"),
+  loaderBadge: document.getElementById("loader-tier-badge"),
   loaderError: document.getElementById("loader-error"),
   errorMessage: document.getElementById("error-message"),
   canvas: document.getElementById("scene"),
-  fps: document.getElementById("fps"),
+  fpsVal: document.getElementById("fps-val"),
+  hudTier: document.getElementById("hud-tier"),
   btnRotate: document.getElementById("btn-rotate"),
   btnReset: document.getElementById("btn-reset"),
   btnWireframe: document.getElementById("btn-wireframe"),
+  btnScreenshot: document.getElementById("btn-screenshot"),
+  btnFullscreen: document.getElementById("btn-fullscreen"),
+  btnToggleInfo: document.getElementById("btn-toggle-info"),
+  infoCard: document.querySelector(".property-card"),
   toast: document.getElementById("toast"),
 };
 
 let scene, camera, renderer, controls, model;
-let clock, fpsFrames = 0, fpsTime = 0;
 let initialCamState;
+let dynamicPixelRatio = 1.0;
 
-/* ---------- 1) المشهد ---------- */
+// فحص الفريمات
+let frameCount = 0;
+let lastFpsTime = performance.now();
+const fpsHistory = [];
+
+/* ---------- 1) فحص عتاد الجهاز التلقائي ---------- */
+function detectDeviceTier() {
+  const cores = navigator.hardwareConcurrency || 4;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile || cores <= 2) return "perf";
+  return "high";
+}
+
+/* ---------- 2) المشهد والإضاءة المعمارية السريعة والواقعية ---------- */
+let lights = {};
+
 function initScene() {
   scene = new THREE.Scene();
   scene.background = null;
-  scene.fog = new THREE.FogExp2(0x1a1836, 0.0004);
+  scene.fog = new THREE.FogExp2(0x0e131d, 0.00015);
 
-  camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, innerWidth / innerHeight, CONFIG.camera.near, CONFIG.camera.far);
-  camera.position.set(80, 60, 80);
+  camera = new THREE.PerspectiveCamera(
+    CONFIG.camera.fov,
+    innerWidth / innerHeight,
+    CONFIG.camera.near,
+    CONFIG.camera.far
+  );
+  camera.position.set(22, 12, 24);
 
   renderer = new THREE.WebGLRenderer({
     canvas: DOM.canvas,
@@ -44,309 +73,377 @@ function initScene() {
     alpha: true,
     powerPreference: "high-performance",
   });
-  // تحديد Pixel Ratio بحد أقصى 1.5 لضمان 60 FPS سلس حتى على كروت الشاشة المدمجة
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+
+  const tier = detectDeviceTier();
+  dynamicPixelRatio = tier === "perf" ? 0.95 : Math.min(window.devicePixelRatio || 1, 1.25);
+  renderer.setPixelRatio(dynamicPixelRatio);
   renderer.setSize(innerWidth, innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  setupEnvironment();
-  setupLights();
+  setupAtmosphere();
+  setupLighting();
   setupControls();
 
-  clock = new THREE.Clock();
   addEventListener("resize", onResize);
 }
 
-/* إضاءة بيئية PBR واقعية محسنة للأداء */
-function setupEnvironment() {
+function setupAtmosphere() {
   const pmrem = new THREE.PMREMGenerator(renderer);
   pmrem.compileEquirectangularShader();
-  const roomEnv = new RoomEnvironmentLite();
-  const envMap = pmrem.fromScene(roomEnv, 0.04).texture;
+  const skyScene = new THREE.Scene();
+
+  const sky = new THREE.Mesh(
+    new THREE.BoxGeometry(200, 200, 200),
+    new THREE.MeshBasicMaterial({ color: 0x98bde3, side: THREE.BackSide })
+  );
+  skyScene.add(sky);
+
+  const horizon = new THREE.Mesh(
+    new THREE.CylinderGeometry(120, 120, 30, 32, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xffeedc, side: THREE.BackSide })
+  );
+  skyScene.add(horizon);
+
+  const envMap = pmrem.fromScene(skyScene, 0.04).texture;
   scene.environment = envMap;
   pmrem.dispose();
 }
 
-class RoomEnvironmentLite extends THREE.Scene {
-  constructor() {
-    super();
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(100, 100, 100),
-      new THREE.MeshBasicMaterial({ color: 0xbfd4ff, side: THREE.BackSide })
-    );
-    this.add(box);
-    const main = new THREE.Mesh(new THREE.SphereGeometry(10, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    main.position.set(20, 40, 20);
-    const warm = new THREE.Mesh(new THREE.SphereGeometry(8, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffe0b3 }));
-    warm.position.set(-30, 25, -20);
-    this.add(main, warm);
-  }
-}
+function setupLighting() {
+  // 1. إضاءة السماء المحيطية
+  lights.hemi = new THREE.HemisphereLight(0xf5f8ff, 0x483e32, 1.4);
+  scene.add(lights.hemi);
 
-function setupLights() {
-  scene.add(new THREE.HemisphereLight(0xe8f0ff, 0x3b3345, 0.8));
+  // 2. ضوء الشمس المحسوب بذكاء ليعمل بـ 60 FPS
+  lights.sun = new THREE.DirectionalLight(0xfff6ea, 2.5);
+  lights.sun.position.set(30, 42, 28);
+  lights.sun.castShadow = true;
+  lights.sun.shadow.mapSize.set(1024, 1024); // حجم خريطة ظل فائق السرعة
+  lights.sun.shadow.bias = -0.0001;
+  lights.sun.shadow.normalBias = 0.02;
+  lights.sun.shadow.camera.near = 1;
+  lights.sun.shadow.camera.far = 100;
+  const d = 25;
+  lights.sun.shadow.camera.left = -d;
+  lights.sun.shadow.camera.right = d;
+  lights.sun.shadow.camera.top = d;
+  lights.sun.shadow.camera.bottom = -d;
+  scene.add(lights.sun);
 
-  const sun = new THREE.DirectionalLight(0xfff5e6, 2.2);
-  sun.position.set(100, 150, 80);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024); // حجم ظلال متوازن وعالي الأداء
-  sun.shadow.bias = -0.0003;
-  sun.shadow.normalBias = 0.02;
-  sun.shadow.camera.near = 10;
-  sun.shadow.camera.far = 500;
-  const d = 80;
-  sun.shadow.camera.left = -d;
-  sun.shadow.camera.right = d;
-  sun.shadow.camera.top = d;
-  sun.shadow.camera.bottom = -d;
-  scene.add(sun);
+  // 3. Fill Light
+  lights.fill = new THREE.DirectionalLight(0x95bbe6, 0.7);
+  lights.fill.position.set(-25, 18, -25);
+  scene.add(lights.fill);
 
-  const fill = new THREE.DirectionalLight(0x88aaff, 0.4);
-  fill.position.set(-80, 40, -100);
-  scene.add(fill);
-
-  // أرضية ظل شفافة
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(2000, 2000),
-    new THREE.ShadowMaterial({ opacity: 0.22 })
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.05;
-  ground.receiveShadow = true;
-  scene.add(ground);
+  // 4. Ambient Light
+  const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+  scene.add(ambient);
 }
 
 function setupControls() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.06;
-  controls.autoRotate = true;
+  controls.dampingFactor = 0.08;
+  controls.autoRotate = false;
   controls.autoRotateSpeed = 0.6;
-  controls.minDistance = 1;      // يدخل جوه الموديل لأي مسافة
-  controls.maxPolarAngle = Math.PI / 2 - 0.02;
+  controls.minDistance = 2.0;
+  controls.maxDistance = 100;
+  controls.maxPolarAngle = Math.PI / 2 - 0.01;
   controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 }
 
-/* ---------- 2) تحميل FBX ---------- */
-function loadModel() {
-  const manager = new THREE.LoadingManager();
-  manager.onProgress = (url, loaded, total) => {
-    if (total > 0) updateProgress(loaded / total);
-  };
+/* ---------- 3) تحميل الموديل والترقية الشاملة للخامات PBR ---------- */
+function updateStatus(text) {
+  if (DOM.loaderStatus) DOM.loaderStatus.textContent = text;
+}
 
-  const fbxLoader = new FBXLoader(manager);
-  fbxLoader.load(
-    CONFIG.fbxPath,
-    (object) => {
-      model = object;
-      prepareModel(model);
-      normalizeScale(model);
+function updateProgress(ratio, loaded, total) {
+  const pct = Math.min(100, Math.max(0, Math.round(ratio * 100)));
+  if (DOM.progressBar) DOM.progressBar.style.width = `${pct}%`;
+  if (DOM.progressText) DOM.progressText.textContent = `${pct}%`;
+
+  if (loaded !== undefined && total !== undefined) {
+    const loadedMB = (loaded / (1024 * 1024)).toFixed(1);
+    const totalMB = (total / (1024 * 1024)).toFixed(1);
+    if (DOM.progressDetail) {
+      DOM.progressDetail.textContent = `${loadedMB} MB / ${totalMB} MB`;
+    }
+  }
+}
+
+function loadModel() {
+  updateStatus("جاري تحميل مجسم المبنى والخامات (163 MB)…");
+  updateProgress(0.05);
+
+  const loader = new GLTFLoader();
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath("https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/");
+  loader.setDRACOLoader(dracoLoader);
+
+  loader.load(
+    CONFIG.modelPath,
+    (gltf) => {
+      model = gltf.scene;
+      enhanceAndOptimizeMaterials(model);
+      centerAndFrameModel(model);
       scene.add(model);
-      frameCamera(model);
       finishLoading();
-      showToast("✓ تم تحميل الموديل بنجاح", false);
+      showToast("✓ تم تحميل المبنى بكامل تفاصيله وواقعيته!");
     },
-    (xhr) => { if (xhr.total > 0) updateProgress(xhr.loaded / xhr.total); },
-    () => showError("فشل تحميل assets/model/villa.fbx — شغّل المشروع عبر خادم محلي وتأكد من وجود الملف.")
+    (xhr) => {
+      if (xhr.lengthComputable && xhr.total > 0) {
+        const ratio = xhr.loaded / xhr.total;
+        updateProgress(ratio, xhr.loaded, xhr.total);
+      } else if (xhr.loaded > 0) {
+        const estTotal = 163 * 1024 * 1024;
+        const ratio = Math.min(0.95, xhr.loaded / estTotal);
+        updateProgress(ratio, xhr.loaded, estTotal);
+      }
+    },
+    (err) => {
+      console.error("[GLTFLoader Error]", err);
+      showError("تعذر تحميل ملف الموديل (Untitled.glb)");
+    }
   );
 }
 
-/* تكسترات ناقصة؟ نختار لون واقعي ذكي بناءً على اسم المادة (grass → أخضر، water → ماء... إلخ) */
-const MATERIAL_COLORS = [
-  { keys: ["grass", "lawn", "turf"], color: 0x4a7c2f },
-  { keys: ["water", "pool"], color: 0x2e8ba8, opacity: 0.75 },
-  { keys: ["glass", "window"], color: 0x9fc4d8, opacity: 0.35 },
-  { keys: ["wood", "floor", "deck"], color: 0x8a6238 },
-  { keys: ["leaf", "tree", "plant", "flower"], color: 0x3f6b2a },
-  { keys: ["trunk"], color: 0x5c4426 },
-  { keys: ["asphalt", "road", "street"], color: 0x3d4045 },
-  { keys: ["concrete", "cement", "pavement"], color: 0xa8a49a },
-  { keys: ["marble", "stone"], color: 0xd8d3ca },
-  { keys: ["brick"], color: 0x9c5b43 },
-  { keys: ["metal", "steel", "iron"], color: 0x9aa1a8, metalness: true },
-  { keys: ["roof"], color: 0x6e4a38 },
-  { keys: ["wall", "stucco", "plaster"], color: 0xe3ddd2 },
-  { keys: ["sand", "soil", "dirt"], color: 0xb59a6e },
-  { keys: ["carpet", "rug", "fabric"], color: 0x77655a },
-];
-
-function pickMaterialColor(mat) {
-  const name = ((mat.name || "") + " " + (childName(mat) || "")).toLowerCase();
-  for (const entry of MATERIAL_COLORS) {
-    if (entry.keys.some((k) => name.includes(k))) return entry;
-  }
-  return null;
-}
-
-let _currentChild = null;
-function childName() { return _currentChild ? _currentChild.name : ""; }
-
-function prepareModel(object) {
+/* تصحيح الألوان وإلغاء السواد ومعالجة الخامات لتصبح معمارية واقعية وسريعة جداً */
+function enhanceAndOptimizeMaterials(object) {
   object.traverse((child) => {
     if (!child.isMesh) return;
-    _currentChild = child;
-    child.castShadow = true;
+
+    const meshName = (child.name || "").toLowerCase();
+
+    // تقليل ضغط الظلال لرفع الفريمات إلى 60 FPS
+    const isMajorOuterWall = meshName.includes("cube") || meshName.includes("wall") || meshName.includes("roof");
+    child.castShadow = isMajorOuterWall;
     child.receiveShadow = true;
-    child.frustumCulled = true; // تفعيل culling لتسريع الرسم وتجاهل الأجزاء خارج مجال الرؤية
+    child.frustumCulled = true;
 
     if (child.geometry && !child.geometry.attributes.normal) {
       child.geometry.computeVertexNormals();
     }
 
     const mats = Array.isArray(child.material) ? child.material : [child.material];
+
     mats.forEach((mat) => {
       if (!mat) return;
-      mat.side = THREE.DoubleSide;
+      const matName = (mat.name || "").toLowerCase();
 
-      if (mat.map && mat.map.image === undefined) {
-        mat.map = null;
+      mat.envMapIntensity = 1.0;
+
+      if (mat.map) {
+        mat.map.colorSpace = THREE.SRGBColorSpace;
+        mat.map.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 4);
       }
-      if (!mat.map) {
-        const match = pickMaterialColor(mat);
-        if (match) {
-          mat.color.setHex(match.color);
-          if (match.opacity !== undefined) {
-            mat.transparent = true;
-            mat.opacity = match.opacity;
-          }
-          if (match.metalness && "metalness" in mat) mat.metalness = 0.8;
-        } else if (mat.color.getHex() === 0xffffff) {
-          mat.color.setHex(0xcac3b6);
-        }
+
+      // 1. تصحيح الجدران الخرسانية والرخامية الفاتحة (إلغاء السواد والبقع)
+      if (matName.includes("plaster.002") || matName.includes("concrete") || matName.includes("plaster") || matName.includes("material.002") || matName.includes("material.003")) {
+        mat.color.setHex(0xdedad2); // لون خرسانة معمارية بيضاء دافئة وواقعية
+        mat.metalness = 0.0;
+        mat.roughness = 0.85; // يمنع أي بقع بيضاء لامعة
+        mat.transparent = false;
+        mat.opacity = 1.0;
       }
+      // 2. الزجاج الشفاف للنوافذ والواجهات
+      else if (matName.includes("glass") || mat.transmission > 0) {
+        mat.transparent = true;
+        mat.opacity = 0.35;
+        mat.roughness = 0.04;
+        mat.metalness = 0.1;
+        mat.depthWrite = false;
+        mat.side = THREE.DoubleSide;
+      }
+      // 3. درابزين الشرفة والمعادن السوداء والأبواب
+      else if (matName.includes("steel") || matName.includes("barierka") || matName.includes("pvc") || matName.includes("black")) {
+        mat.color.setHex(0x242629); // أسود معدني معماري مطفي
+        mat.roughness = 0.35;
+        mat.metalness = 0.8;
+        mat.side = THREE.DoubleSide;
+      }
+      // 4. السقف والألواح
+      else if (matName.includes("roof") || matName.includes("schody")) {
+        mat.color.setHex(0x32353a);
+        mat.roughness = 0.6;
+        mat.metalness = 0.2;
+      }
+      // 5. الخشب الطبيعي
+      else if (matName.includes("wood")) {
+        mat.roughness = 0.5;
+        mat.metalness = 0.05;
+      }
+      // 6. الرصيف وأحجار الأرضيات
+      else if (matName.includes("pavingstone") || matName.includes("cobblestone") || matName.includes("tiles") || matName.includes("floor")) {
+        mat.roughness = 0.8;
+        mat.metalness = 0.02;
+      }
+
       mat.needsUpdate = true;
     });
   });
-  _currentChild = null;
 }
 
-/* توحيد الحجم تلقائياً (الموديل قد يكون بمقياس ضخم أو صغير) */
-function normalizeScale(object) {
-  const box = new THREE.Box3().setFromObject(object);
-  const size = box.getSize(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  if (maxDim <= 0) return;
-  const scale = 60 / maxDim;
-  object.scale.setScalar(scale);
-}
-
-/* كاميرا Fit تلقائية على الموديل */
-function frameCamera(object) {
+function centerAndFrameModel(object) {
   const box = new THREE.Box3().setFromObject(object);
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
-  const radius = Math.max(size.length() / 2, 1);
+  const maxDim = Math.max(size.x, size.y, size.z);
 
-  object.position.sub(center);
-  box.setFromObject(object);
+  // ضبط الموديل ليكون على الأرض
+  object.position.x -= center.x;
+  object.position.y -= box.min.y;
+  object.position.z -= center.z;
 
   const fov = THREE.MathUtils.degToRad(camera.fov);
-  const dist = (radius / Math.sin(fov / 2)) * 0.95;
-  const dir = new THREE.Vector3(1, 0.6, 1).normalize();
-  camera.position.copy(dir.multiplyScalar(dist));
-  camera.near = Math.max(dist / 100, 0.01);
-  camera.far = dist * 20;
+  const dist = (maxDim / Math.sin(fov / 2)) * 0.72;
+
+  camera.position.set(dist * 0.62, size.y * 0.7, dist * 0.75);
+  camera.near = Math.max(dist / 200, 0.1);
+  camera.far = dist * 25;
   camera.updateProjectionMatrix();
 
-  controls.target.set(0, size.y * 0.15, 0);
-  controls.minDistance = radius * 0.05;
+  controls.target.set(0, size.y * 0.35, 0);
+  controls.minDistance = 2.0;
   controls.maxDistance = dist * 4;
   controls.update();
 
   initialCamState = { pos: camera.position.clone(), target: controls.target.clone() };
 }
 
-function updateProgress(ratio) {
-  const pct = Math.min(100, Math.round(ratio * 100));
-  DOM.progressBar.style.width = `${pct}%`;
-  DOM.progressText.textContent = `${pct}%`;
+/* ---------- 4) محرك التكيف التلقائي (Stable 60 FPS) ---------- */
+function adaptPerformance(currentFps) {
+  fpsHistory.push(currentFps);
+  if (fpsHistory.length > 3) {
+    fpsHistory.shift();
+    const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
+
+    if (avgFps < 45 && dynamicPixelRatio > 0.85) {
+      dynamicPixelRatio = Math.max(0.8, Number((dynamicPixelRatio - 0.08).toFixed(2)));
+      renderer.setPixelRatio(dynamicPixelRatio);
+    } else if (avgFps >= 57 && dynamicPixelRatio < Math.min(window.devicePixelRatio || 1, 1.4)) {
+      dynamicPixelRatio = Math.min(Math.min(window.devicePixelRatio || 1, 1.4), Number((dynamicPixelRatio + 0.04).toFixed(2)));
+      renderer.setPixelRatio(dynamicPixelRatio);
+    }
+  }
+}
+
+/* ---------- 5) دورة العرض التفاعلية ---------- */
+function animate() {
+  requestAnimationFrame(animate);
+
+  const now = performance.now();
+
+  controls.update();
+  renderer.render(scene, camera);
+
+  frameCount++;
+  if (now - lastFpsTime >= 1000) {
+    const currentFps = Math.round((frameCount * 1000) / (now - lastFpsTime));
+    if (DOM.fpsVal) DOM.fpsVal.textContent = `${currentFps}`;
+    adaptPerformance(currentFps);
+    frameCount = 0;
+    lastFpsTime = now;
+  }
+}
+
+/* ---------- 6) الأدوات المساعدة ---------- */
+function captureScreenshot() {
+  renderer.render(scene, camera);
+  const dataURL = DOM.canvas.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = dataURL;
+  a.download = `Architecture_3D_${Date.now()}.png`;
+  a.click();
+  showToast("📸 تم حفظ صورة المبنى بنجاح!");
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+    showToast("⛶ تم تفعيل ملء الشاشة");
+  } else {
+    document.exitFullscreen();
+    showToast("⛶ تم الخروج من ملء الشاشة");
+  }
 }
 
 function finishLoading() {
   updateProgress(1);
+  updateStatus("اكتمل تحميل المبنى بنجاح!");
   setTimeout(() => {
     DOM.loader.classList.add("done");
     document.body.classList.add("ready");
-  }, 350);
+  }, 300);
 }
 
 function showError(msg) {
   DOM.errorMessage.textContent = msg;
   DOM.loaderError.classList.remove("hidden");
-  DOM.progressBar.style.background = "#ff4d4d";
-  console.error("[Villa Viewer]", msg);
+  if (DOM.progressBar) DOM.progressBar.style.background = "#ef4444";
 }
 
 let toastTimer;
-function showToast(msg, isError) {
+function showToast(msg) {
   DOM.toast.textContent = msg;
   DOM.toast.classList.remove("hidden");
-  DOM.toast.style.borderColor = isError ? "rgba(255,90,90,.5)" : "rgba(120,255,160,.35)";
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => DOM.toast.classList.add("hidden"), 3200);
+  toastTimer = setTimeout(() => DOM.toast.classList.add("hidden"), 3000);
 }
 
-/* ---------- 3) حلقة الرسم ---------- */
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = clock.getDelta();
-
-  controls.update();
-  renderer.render(scene, camera);
-
-  fpsFrames++;
-  fpsTime += dt;
-  if (fpsTime >= 1) {
-    DOM.fps.textContent = `${Math.round(fpsFrames / fpsTime)} FPS`;
-    fpsFrames = 0;
-    fpsTime = 0;
-  }
-}
-
-/* ---------- 4) الأحداث ---------- */
 function onResize() {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(dynamicPixelRatio);
 }
 
 function initUI() {
-  DOM.btnRotate.addEventListener("click", () => {
+  DOM.btnRotate?.addEventListener("click", () => {
     controls.autoRotate = !controls.autoRotate;
     DOM.btnRotate.classList.toggle("active", controls.autoRotate);
-    DOM.btnRotate.setAttribute("aria-pressed", String(controls.autoRotate));
+    showToast(controls.autoRotate ? "⟳ تم تشغيل الدوران التلقائي" : "⏸ تم إيقاف الدوران");
   });
 
-  DOM.btnReset.addEventListener("click", () => {
-    camera.position.copy(initialCamState.pos);
-    controls.target.copy(initialCamState.target);
-    controls.update();
+  DOM.btnReset?.addEventListener("click", () => {
+    if (initialCamState) {
+      camera.position.copy(initialCamState.pos);
+      controls.target.copy(initialCamState.target);
+      controls.update();
+      showToast("⌂ تم إعادة ضبط الكاميرا");
+    }
   });
 
-  DOM.btnWireframe.addEventListener("click", () => {
+  DOM.btnWireframe?.addEventListener("click", () => {
     const enable = !DOM.btnWireframe.classList.contains("active");
     DOM.btnWireframe.classList.toggle("active", enable);
-    DOM.btnWireframe.setAttribute("aria-pressed", String(enable));
     model?.traverse((child) => {
       if (!child.isMesh) return;
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       mats.forEach((m) => m && (m.wireframe = enable));
     });
+    showToast(enable ? "◈ تفعيل وضع الهيكل السلكي (Wireframe)" : "◈ العرض الملون الكامل");
+  });
+
+  DOM.btnScreenshot?.addEventListener("click", captureScreenshot);
+  DOM.btnFullscreen?.addEventListener("click", toggleFullscreen);
+
+  DOM.btnToggleInfo?.addEventListener("click", () => {
+    DOM.infoCard.classList.toggle("collapsed");
+    DOM.btnToggleInfo.textContent = DOM.infoCard.classList.contains("collapsed") ? "+" : "−";
   });
 }
 
-/* ---------- 5) البدء ---------- */
+/* ---------- 7) البدء ---------- */
 try {
   initScene();
   loadModel();
   initUI();
   animate();
 } catch (err) {
-  console.error("[Villa Viewer] Initialization failed:", err);
-  showError(`تعذر بدء العارض: ${err.message}`);
+  console.error("[Architecture Viewer] Init Error:", err);
+  showError(`تعذر بدء العارض ثلاثي الأبعاد: ${err.message}`);
 }

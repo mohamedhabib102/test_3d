@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="عارض ثلاثي الأبعاد حديث لفيلا المناظر الطبيعية - Three.js" />
-  <title>Villa 3D Viewer | عارض الفيلا ثلاثي الأبعاد</title>
+  <meta name="description" content="عارض المبنى السكني المعماري الفاخر ثلاثي الأبعاد - تفاصيل واقعية وخامات PBR" />
+  <title>Modern Residential Architecture | عارض المبنى المعماري 3D</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,13 +15,20 @@
   <!-- شاشة التحميل -->
   <div id="loader" class="loader" role="status" aria-live="polite">
     <div class="loader-card glass">
-      <div class="loader-ring"><span></span></div>
-      <h1 class="loader-title">Villa 3D Viewer</h1>
-      <p class="loader-subtitle">جاري تحميل الموديل ثلاثي الأبعاد…</p>
+      <div class="loader-ring">
+        <span></span>
+        <div class="loader-core">🏢</div>
+      </div>
+      <h1 class="loader-title">Modern Architecture 3D</h1>
+      <p id="loader-status" class="loader-subtitle">جاري تحميل مجسم المبنى والخامات الواقعية…</p>
       <div class="progress-track">
         <div id="progress-bar" class="progress-bar"></div>
       </div>
-      <p id="progress-text" class="progress-text">0%</p>
+      <div class="progress-info">
+        <span id="progress-text" class="progress-text">0%</span>
+        <span id="progress-detail" class="progress-detail">0 MB / 163 MB</span>
+      </div>
+      <div class="loader-badge" id="loader-tier-badge">⚡ تكيف تلقائي سلس وسريع (60 FPS)</div>
     </div>
     <div id="loader-error" class="loader-error glass hidden">
       <strong>⚠ تعذر تحميل الموديل</strong>
@@ -29,48 +36,77 @@
     </div>
   </div>
 
-  <!-- الخلفية المتدرجة -->
-  <div class="bg-gradient" aria-hidden="true">
-    <span class="blob blob-1"></span>
-    <span class="blob blob-2"></span>
-    <span class="blob blob-3"></span>
+  <!-- خلفية الأجواء المعمارية -->
+  <div class="sky-backdrop" aria-hidden="true">
+    <span class="light-glow glow-1"></span>
+    <span class="light-glow glow-2"></span>
   </div>
 
   <!-- مشهد 3D -->
   <canvas id="scene"></canvas>
 
-  <!-- البطاقة العائمة العلوية -->
+  <!-- الشريط العلوي الرئيسي النظيف بدون أي أزرار أوضاع -->
   <header class="top-bar glass fade-in">
     <div class="brand">
       <span class="brand-dot"></span>
-      <h2>Villa Landscape <small>3D Viewer</small></h2>
+      <div>
+        <h2>Modern Residential Architecture <span class="badge-tag">PBR واقعي</span></h2>
+        <small>معاينة تفاعلية معمارية ثلاثية الأبعاد</small>
+      </div>
     </div>
-    <nav class="controls">
-      <button id="btn-rotate" class="btn-icon active" title="تشغيل/إيقاف الدوران التلقائي" aria-pressed="true">
-        ⟳
+
+    <!-- أدوات التحكم الأساسية فقط -->
+    <div class="quick-tools">
+      <button id="btn-rotate" class="btn-icon" title="تشغيل/إيقاف الدوران التلقائي" aria-pressed="false">
+        <span>⟳</span>
       </button>
-      <button id="btn-reset" class="btn-icon" title="إعادة الضبط">⌂</button>
-      <button id="btn-wireframe" class="btn-icon" title="وضع الهيكل السلكي" aria-pressed="false">◈</button>
-    </nav>
+      <button id="btn-reset" class="btn-icon" title="إعادة ضبط الكاميرا">
+        <span>⌂</span>
+      </button>
+      <button id="btn-wireframe" class="btn-icon" title="وضع الهيكل السلكي (Wireframe)" aria-pressed="false">
+        <span>◈</span>
+      </button>
+      <button id="btn-screenshot" class="btn-icon" title="التقاط صورة للمبنى">
+        <span>📸</span>
+      </button>
+      <button id="btn-fullscreen" class="btn-icon" title="وضع ملء الشاشة">
+        <span>⛶</span>
+      </button>
+    </div>
   </header>
 
-  <!-- بطاقة المعلومات -->
-  <aside class="info-card glass fade-in delay-1">
-    <h3>معلومات الموديل</h3>
-    <ul>
-      <li><span>الاسم</span><strong>Villa Landscape</strong></li>
-      <li><span>الصيغة</span><strong>FBX 3D Model</strong></li>
-      <li><span>المحرك</span><strong>Three.js WebGL</strong></li>
-    </ul>
-    <p class="hint">اسحب للتدوير • عجلة الفأرة للتكبير • زر الفأرة الأيمن للتحريك</p>
+  <!-- بطاقة مواصفات العقار -->
+  <aside class="property-card glass fade-in delay-1">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="icon">✨</span>
+        <h3>تفاصيل العقار</h3>
+      </div>
+      <button id="btn-toggle-info" class="btn-mini" title="تصغير/تكبير">−</button>
+    </div>
+    <div id="info-content" class="card-body">
+      <ul class="specs-list">
+        <li><span>نوع العقار</span><strong>مبنى سكني عصري فاخر</strong></li>
+        <li><span>التفاصيل الهندسية</span><strong>4 طوابق + شرفات زجاجية وتراس</strong></li>
+        <li><span>الخامات المطبقة</span><strong>خرسانة معمارية، خشب طبيعي، زجاج PBR</strong></li>
+        <li><span>الأداء والسلاسة</span><strong class="text-accent">ثابت 60 FPS (تكيف تلقائي)</strong></li>
+      </ul>
+      <div class="quick-hints">
+        <span>🖱 اسحب بالماوس للتدوير • عجلة الفأرة للتقريب • الزر الأيمن للتحريك</span>
+      </div>
+    </div>
   </aside>
 
-  <!-- مؤشر الأداء -->
-  <footer class="fps-chip glass fade-in delay-2">
-    <span id="fps">-- FPS</span>
+  <!-- شريط مؤشر الأداء التلقائي -->
+  <footer class="hud-bar glass fade-in delay-2">
+    <div class="fps-indicator">
+      <span id="fps-val">--</span>
+      <span class="fps-label">FPS</span>
+    </div>
+    <div class="stat-pill" id="hud-tier">⚡ تكيف تلقائي سلس 60 FPS</div>
   </footer>
 
-  <!-- رسالة الخطأ داخل الصفحة -->
+  <!-- إشعار Toast -->
   <div id="toast" class="toast glass hidden"></div>
 
   <script type="importmap">
