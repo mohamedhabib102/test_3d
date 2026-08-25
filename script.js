@@ -204,7 +204,7 @@ async function loadModel() {
         const ratio = xhr.loaded / xhr.total;
         updateProgress(ratio, xhr.loaded, xhr.total);
       } else if (xhr.loaded > 0) {
-        const estTotal = 163 * 1024 * 1024;
+        const estTotal = 8 * 1024 * 1024;
         const ratio = Math.min(0.96, xhr.loaded / estTotal);
         updateProgress(ratio, xhr.loaded, estTotal);
       }
