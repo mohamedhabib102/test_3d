@@ -3,12 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta name="description" content="عارض المبنى السكني المعماري الفاخر ثلاثي الأبعاد - تفاصيل واقعية وخامات PBR" />
   <title>Modern Residential Architecture | عارض المبنى المعماري 3D</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
 
@@ -26,9 +29,9 @@
       </div>
       <div class="progress-info">
         <span id="progress-text" class="progress-text">0%</span>
-        <span id="progress-detail" class="progress-detail">0 MB / 163 MB</span>
+        <span id="progress-detail" class="progress-detail">جاري المعالجة…</span>
       </div>
-      <div class="loader-badge" id="loader-tier-badge">⚡ تكيف تلقائي سلس وسريع (60 FPS)</div>
+      <div class="loader-badge" id="loader-tier-badge">⚡ تكيف تلقائي وسلس (60 FPS)</div>
     </div>
     <div id="loader-error" class="loader-error glass hidden">
       <strong>⚠ تعذر تحميل الموديل</strong>
@@ -45,7 +48,7 @@
   <!-- مشهد 3D -->
   <canvas id="scene"></canvas>
 
-  <!-- الشريط العلوي الرئيسي النظيف بدون أي أزرار أوضاع -->
+  <!-- الشريط العلوي الرئيسي النظيف -->
   <header class="top-bar glass fade-in">
     <div class="brand">
       <span class="brand-dot"></span>
@@ -55,7 +58,7 @@
       </div>
     </div>
 
-    <!-- أدوات التحكم الأساسية فقط -->
+    <!-- أدوات التحكم الأساسية -->
     <div class="quick-tools">
       <button id="btn-rotate" class="btn-icon" title="تشغيل/إيقاف الدوران التلقائي" aria-pressed="false">
         <span>⟳</span>
@@ -87,7 +90,7 @@
     <div id="info-content" class="card-body">
       <ul class="specs-list">
         <li><span>نوع العقار</span><strong>مبنى سكني عصري فاخر</strong></li>
-        <li><span>التفاصيل الهندسية</span><strong>4 طوابق + شرفات زجاجية وتراس</strong></li>
+        <li><span>التفاصيل الهندسية</span><strong>4 طوابق + شرفات وتراس</strong></li>
         <li><span>الخامات المطبقة</span><strong>خرسانة معمارية، خشب طبيعي، زجاج PBR</strong></li>
         <li><span>الأداء والسلاسة</span><strong class="text-accent">ثابت 60 FPS (تكيف تلقائي)</strong></li>
       </ul>
@@ -117,6 +120,6 @@
     }
   }
   </script>
-  <script src="script.js" type="module"></script>
+  <script src="script.js?v=3" type="module"></script>
 </body>
 </html>

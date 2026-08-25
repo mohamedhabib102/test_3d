@@ -2,13 +2,17 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 
 /* ============================================================
-   Modern Residential Architecture 3D — Ultra-Fast 60 FPS & Realistic PBR
+   Modern Residential Architecture 3D — Dual Engine & 60 FPS
    ============================================================ */
 
 const CONFIG = {
-  modelPath: "Untitled.glb",
+  glbPath: "Untitled.glb",
+  objPath: "Untitled.obj",
+  mtlPath: "Untitled.mtl",
   camera: { fov: 40, near: 0.2, far: 400 },
 };
 
@@ -118,11 +122,11 @@ function setupLighting() {
   lights.hemi = new THREE.HemisphereLight(0xf5f8ff, 0x483e32, 1.4);
   scene.add(lights.hemi);
 
-  // 2. ضوء الشمس المحسوب بذكاء ليعمل بـ 60 FPS
+  // 2. ضوء الشمس
   lights.sun = new THREE.DirectionalLight(0xfff6ea, 2.5);
   lights.sun.position.set(30, 42, 28);
   lights.sun.castShadow = true;
-  lights.sun.shadow.mapSize.set(1024, 1024); // حجم خريطة ظل فائق السرعة
+  lights.sun.shadow.mapSize.set(1024, 1024);
   lights.sun.shadow.bias = -0.0001;
   lights.sun.shadow.normalBias = 0.02;
   lights.sun.shadow.camera.near = 1;
@@ -156,7 +160,7 @@ function setupControls() {
   controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 }
 
-/* ---------- 3) تحميل الموديل والترقية الشاملة للخامات PBR ---------- */
+/* ---------- 3) تحميل الموديل مع دعم الـ Fallback التلقائي (GLB ⬅ OBJ) ---------- */
 function updateStatus(text) {
   if (DOM.loaderStatus) DOM.loaderStatus.textContent = text;
 }
@@ -166,7 +170,7 @@ function updateProgress(ratio, loaded, total) {
   if (DOM.progressBar) DOM.progressBar.style.width = `${pct}%`;
   if (DOM.progressText) DOM.progressText.textContent = `${pct}%`;
 
-  if (loaded !== undefined && total !== undefined) {
+  if (loaded !== undefined && total !== undefined && total > 0) {
     const loadedMB = (loaded / (1024 * 1024)).toFixed(1);
     const totalMB = (total / (1024 * 1024)).toFixed(1);
     if (DOM.progressDetail) {
@@ -176,7 +180,7 @@ function updateProgress(ratio, loaded, total) {
 }
 
 function loadModel() {
-  updateStatus("جاري تحميل مجسم المبنى والخامات (163 MB)…");
+  updateStatus("جاري تحميل مجسم المبنى والخامات الواقعية…");
   updateProgress(0.05);
 
   const loader = new GLTFLoader();
@@ -184,8 +188,9 @@ function loadModel() {
   dracoLoader.setDecoderPath("https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/");
   loader.setDRACOLoader(dracoLoader);
 
+  // محاولة تحميل ملف GLB أولاً
   loader.load(
-    CONFIG.modelPath,
+    CONFIG.glbPath,
     (gltf) => {
       model = gltf.scene;
       enhanceAndOptimizeMaterials(model);
@@ -205,20 +210,70 @@ function loadModel() {
       }
     },
     (err) => {
-      console.error("[GLTFLoader Error]", err);
-      showError("تعذر تحميل ملف الموديل (Untitled.glb)");
+      console.warn("[GLTFLoader Fallback to OBJ]", err);
+      loadObjFallback();
     }
   );
 }
 
-/* تصحيح الألوان وإلغاء السواد ومعالجة الخامات لتصبح معمارية واقعية وسريعة جداً */
+function loadObjFallback() {
+  updateStatus("جاري قراءة خامات ومجسم المبنى (Untitled.obj)…");
+  updateProgress(0.3);
+
+  const mtlLoader = new MTLLoader();
+  mtlLoader.load(
+    CONFIG.mtlPath,
+    (materials) => {
+      materials.preload();
+      const objLoader = new OBJLoader();
+      objLoader.setMaterials(materials);
+      objLoader.load(
+        CONFIG.objPath,
+        (object) => {
+          model = object;
+          enhanceAndOptimizeMaterials(model);
+          centerAndFrameModel(model);
+          scene.add(model);
+          finishLoading();
+          showToast("✓ تم تحميل المبنى بنجاح!");
+        },
+        (xhr) => {
+          if (xhr.lengthComputable) {
+            const ratio = 0.3 + (xhr.loaded / xhr.total) * 0.7;
+            updateProgress(ratio, xhr.loaded, xhr.total);
+          }
+        },
+        (err) => {
+          console.error("[OBJLoader Error]", err);
+          showError("تعذر تحميل ملف الموديل");
+        }
+      );
+    },
+    (xhr) => {
+      if (xhr.lengthComputable) updateProgress((xhr.loaded / xhr.total) * 0.3);
+    },
+    () => {
+      // إذا لم يتوفر MTL نحمل OBJ مباشرة
+      const objLoader = new OBJLoader();
+      objLoader.load(CONFIG.objPath, (object) => {
+        model = object;
+        enhanceAndOptimizeMaterials(model);
+        centerAndFrameModel(model);
+        scene.add(model);
+        finishLoading();
+      });
+    }
+  );
+}
+
+/* ترقية الخامات إلى PBR وإلغاء السواد والبقع اللامعة */
 function enhanceAndOptimizeMaterials(object) {
   object.traverse((child) => {
     if (!child.isMesh) return;
 
     const meshName = (child.name || "").toLowerCase();
 
-    // تقليل ضغط الظلال لرفع الفريمات إلى 60 FPS
+    // تخفيف ضغط الظلال لضمان 60 FPS
     const isMajorOuterWall = meshName.includes("cube") || meshName.includes("wall") || meshName.includes("roof");
     child.castShadow = isMajorOuterWall;
     child.receiveShadow = true;
@@ -241,15 +296,15 @@ function enhanceAndOptimizeMaterials(object) {
         mat.map.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 4);
       }
 
-      // 1. تصحيح الجدران الخرسانية والرخامية الفاتحة (إلغاء السواد والبقع)
+      // 1. تصحيح الجدران الخرسانية والرخامية الفاتحة
       if (matName.includes("plaster.002") || matName.includes("concrete") || matName.includes("plaster") || matName.includes("material.002") || matName.includes("material.003")) {
-        mat.color.setHex(0xdedad2); // لون خرسانة معمارية بيضاء دافئة وواقعية
+        mat.color.setHex(0xdedad2);
         mat.metalness = 0.0;
-        mat.roughness = 0.85; // يمنع أي بقع بيضاء لامعة
+        mat.roughness = 0.85;
         mat.transparent = false;
         mat.opacity = 1.0;
       }
-      // 2. الزجاج الشفاف للنوافذ والواجهات
+      // 2. الزجاج الشفاف للنوافذ
       else if (matName.includes("glass") || mat.transmission > 0) {
         mat.transparent = true;
         mat.opacity = 0.35;
@@ -260,7 +315,7 @@ function enhanceAndOptimizeMaterials(object) {
       }
       // 3. درابزين الشرفة والمعادن السوداء والأبواب
       else if (matName.includes("steel") || matName.includes("barierka") || matName.includes("pvc") || matName.includes("black")) {
-        mat.color.setHex(0x242629); // أسود معدني معماري مطفي
+        mat.color.setHex(0x242629);
         mat.roughness = 0.35;
         mat.metalness = 0.8;
         mat.side = THREE.DoubleSide;
@@ -293,7 +348,6 @@ function centerAndFrameModel(object) {
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
 
-  // ضبط الموديل ليكون على الأرض
   object.position.x -= center.x;
   object.position.y -= box.min.y;
   object.position.z -= center.z;
