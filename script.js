@@ -37,7 +37,6 @@ let scene, camera, renderer, controls, model;
 let initialCamState;
 let frameCount = 0;
 let lastFpsTime = performance.now();
-let movingCars = [];
 
 /* ---------- 1) إعداد المشهد والـ Renderer ---------- */
 function initScene() {
@@ -71,7 +70,6 @@ function initScene() {
 
   setupLighting();
   setupEnvironment();
-  buildRealEstateEnvironment();
   setupControls();
 
   window.addEventListener("resize", onResize);
@@ -150,157 +148,6 @@ function setupControls() {
   controls.maxDistance = 120;
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
-}
-
-/* ---------- بيئة معمارية واقعية (Real Estate Environment) ---------- */
-function buildRealEstateEnvironment() {
-  const envGroup = new THREE.Group();
-  envGroup.name = "RealEstateEnvironment";
-  
-  // 1. مسطح العشب الأخضر (Grass Plane)
-  const grassMat = new THREE.MeshStandardMaterial({ color: 0x4a6b41, roughness: 0.9, metalness: 0.05 });
-  const grassGeo = new THREE.PlaneGeometry(400, 400);
-  const grass = new THREE.Mesh(grassGeo, grassMat);
-  grass.rotation.x = -Math.PI / 2;
-  grass.position.y = -0.1;
-  grass.receiveShadow = true;
-  envGroup.add(grass);
-
-  // 2. الشارع الأسفلتي (Asphalt Road)
-  const roadMat = new THREE.MeshStandardMaterial({ color: 0x1f2326, roughness: 0.8, metalness: 0.1 });
-  const roadGeo = new THREE.PlaneGeometry(400, 30);
-  const road = new THREE.Mesh(roadGeo, roadMat);
-  road.rotation.x = -Math.PI / 2;
-  road.position.set(0, 0, 35);
-  road.receiveShadow = true;
-  envGroup.add(road);
-
-  // 3. الأرصفة (Sidewalks)
-  const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xd9d3c8, roughness: 0.8 });
-  const swGeo = new THREE.BoxGeometry(400, 0.4, 6);
-  const sidewalk1 = new THREE.Mesh(swGeo, sidewalkMat);
-  sidewalk1.position.set(0, 0.1, 17);
-  sidewalk1.receiveShadow = true;
-  envGroup.add(sidewalk1);
-
-  const sidewalk2 = new THREE.Mesh(swGeo, sidewalkMat);
-  sidewalk2.position.set(0, 0.1, 53);
-  sidewalk2.receiveShadow = true;
-  envGroup.add(sidewalk2);
-
-  // 4. خطوط المرور البيضاء المتقطعة (Road markings)
-  const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  for(let i = -190; i < 190; i += 10) {
-    const dash = new THREE.Mesh(new THREE.PlaneGeometry(4, 0.4), lineMat);
-    dash.rotation.x = -Math.PI / 2;
-    dash.position.set(i, 0.05, 35);
-    envGroup.add(dash);
-  }
-
-  // 5. مولد الأشجار المعمارية الأنيقة (Stylized Tree Generator)
-  function createTree(x, z, scale = 1) {
-    const treeGroup = new THREE.Group();
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 4, 8), trunkMat);
-    trunk.position.y = 2;
-    trunk.castShadow = true;
-    trunk.receiveShadow = true;
-    treeGroup.add(trunk);
-    
-    const leavesMat = new THREE.MeshStandardMaterial({ color: 0x5a8b44, roughness: 0.8, flatShading: true });
-    const leaves = new THREE.Mesh(new THREE.IcosahedronGeometry(2.5, 1), leavesMat);
-    leaves.position.y = 5;
-    leaves.castShadow = true;
-    leaves.receiveShadow = true;
-    treeGroup.add(leaves);
-    
-    treeGroup.position.set(x, 0, z);
-    treeGroup.scale.set(scale, scale, scale);
-    return treeGroup;
-  }
-
-  // توزيع الأشجار حول المبنى والشارع
-  const treePositions = [
-    [-30, 10, 1.2], [-45, 12, 1], [-25, -15, 1.1], [30, 8, 1.3], [40, 15, 0.9],
-    [35, -10, 1], [-40, -20, 1.2], [45, -25, 1], [-50, 48, 1.4], [-20, 48, 1.1],
-    [20, 48, 1], [50, 48, 1.2], [-60, -5, 1], [60, -10, 1.1], [70, 20, 1.5], [-70, 20, 1.3]
-  ];
-  treePositions.forEach(pos => {
-    envGroup.add(createTree(pos[0], pos[1], pos[2]));
-  });
-
-  // 6. مولد السيارات (Stylized Low-poly Car)
-  function createCar(color, x, z, direction = 1) {
-    const carGroup = new THREE.Group();
-    const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4, metalness: 0.3 });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.2, 2.2), bodyMat);
-    body.position.y = 1;
-    body.castShadow = true;
-    carGroup.add(body);
-    
-    const topMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.8, 2.0), topMat);
-    top.position.set(-0.2, 1.8, 0);
-    top.castShadow = true;
-    carGroup.add(top);
-    
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
-    const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16);
-    wheelGeo.rotateX(Math.PI / 2);
-    const wheelPositions = [ [1.4, 0.5, 1.1], [-1.4, 0.5, 1.1], [1.4, 0.5, -1.1], [-1.4, 0.5, -1.1] ];
-    wheelPositions.forEach(pos => {
-      const w = new THREE.Mesh(wheelGeo, wheelMat);
-      w.position.set(...pos);
-      w.castShadow = true;
-      carGroup.add(w);
-    });
-
-    carGroup.position.set(x, 0, z);
-    if (direction === -1) carGroup.rotation.y = Math.PI;
-    
-    const headlight = new THREE.PointLight(0xffffee, 1.5, 20);
-    headlight.position.set(direction === 1 ? 2.5 : -2.5, 1, 0);
-    carGroup.add(headlight);
-
-    carGroup.userData = { speed: (0.2 + Math.random() * 0.15) * direction };
-    return carGroup;
-  }
-
-  // إضافة سيارات تتحرك
-  const car1 = createCar(0xaa2222, -100, 30, 1);
-  const car2 = createCar(0x2222aa, 120, 40, -1);
-  const car3 = createCar(0xcccccc, -40, 30, 1);
-  envGroup.add(car1, car2, car3);
-  movingCars.push(car1, car2, car3);
-
-  // 7. أعمدة إنارة الشارع (Street Lights)
-  function createStreetLight(x, z) {
-    const poleGroup = new THREE.Group();
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 });
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 10), poleMat);
-    pole.position.y = 5;
-    poleGroup.add(pole);
-    
-    const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffddaa });
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.5), bulbMat);
-    bulb.position.set(0, 10, 0);
-    poleGroup.add(bulb);
-    
-    const light = new THREE.PointLight(0xffddaa, 1.5, 50);
-    light.position.set(0, 10, 0);
-    light.castShadow = true;
-    poleGroup.add(light);
-
-    poleGroup.position.set(x, 0, z);
-    return poleGroup;
-  }
-
-  for(let i = -160; i <= 160; i += 40) {
-    envGroup.add(createStreetLight(i, 18));
-    envGroup.add(createStreetLight(i, 52));
-  }
-
-  scene.add(envGroup);
 }
 
 /* ---------- 3) تحميل الموديل المعماري الكامل ---------- */
@@ -550,15 +397,6 @@ function animate() {
   requestAnimationFrame(animate);
 
   const now = performance.now();
-  
-  // تحريك السيارات
-  if (movingCars && movingCars.length > 0) {
-    movingCars.forEach(car => {
-      car.position.x += car.userData.speed;
-      if (car.userData.speed > 0 && car.position.x > 200) car.position.x = -200;
-      if (car.userData.speed < 0 && car.position.x < -200) car.position.x = 200;
-    });
-  }
 
   controls.update();
   renderer.render(scene, camera);
