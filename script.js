@@ -218,7 +218,7 @@ function loadModel() {
 function applyArchitecturalMaterials(object) {
   // خامات مسبقة الصنع فائقة الدقة
   const matWhiteWall = new THREE.MeshStandardMaterial({
-    color: 0xfcfdff, // أبيض نقي ناصع مصمت
+    color: 0xeef1f4, // أبيض واقعي ناعم
     roughness: 0.88,
     metalness: 0.0,
     side: THREE.DoubleSide,
@@ -267,20 +267,18 @@ function applyArchitecturalMaterials(object) {
     side: THREE.DoubleSide,
   });
 
-  const matGlass = new THREE.MeshPhysicalMaterial({
-    color: 0x1a232a, // لون زجاج داكن وأنيق
-    transparent: true,
-    opacity: 0.85, // شبه معتم لإخفاء الداخل المظلم
-    roughness: 0.05,
-    metalness: 0.85, // معدنية عالية ليعكس السماء
-    envMapIntensity: 2.0,
+  const matGlass = new THREE.MeshStandardMaterial({
+    color: 0x4a6a82, // لون زجاج أزرق رمادي نهاري
+    roughness: 0.15,
+    metalness: 0.75, // يعكس السماء بشكل ناعم
+    envMapIntensity: 1.5,
     side: THREE.DoubleSide,
   });
 
   const matDarkFrame = new THREE.MeshStandardMaterial({
-    color: 0x22252a,
-    roughness: 0.45,
-    metalness: 0.7,
+    color: 0x3d444e, // رمادي معدني إطارات
+    roughness: 0.5,
+    metalness: 0.6,
     side: THREE.DoubleSide,
   });
 
