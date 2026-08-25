@@ -35,7 +35,7 @@ html, body {
   inset: 0;
   z-index: -1;
   overflow: hidden;
-  background: linear-gradient(180deg, #7c90a1 0%, #9cb1c2 42%, #687a89 100%);
+  background: linear-gradient(135deg, #74abd5 0%, #a2c6e6 40%, #e8f0f8 100%);
 }
 
 .light-glow {

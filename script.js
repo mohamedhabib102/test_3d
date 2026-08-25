@@ -127,7 +127,7 @@ function setupEnvironment() {
   const skyMesh = new THREE.Mesh(
     new THREE.SphereGeometry(120, 32, 32),
     new THREE.MeshBasicMaterial({
-      color: 0x9cb0bf,
+      color: 0x8dbbe0, // لون سماء أزرق فاتح لينعكس على الزجاج
       side: THREE.BackSide,
     })
   );
@@ -268,12 +268,12 @@ function applyArchitecturalMaterials(object) {
   });
 
   const matGlass = new THREE.MeshPhysicalMaterial({
-    color: 0xd0e2ec,
+    color: 0x1a232a, // لون زجاج داكن وأنيق
     transparent: true,
-    opacity: 0.38,
-    roughness: 0.04,
-    metalness: 0.15,
-    depthWrite: false,
+    opacity: 0.85, // شبه معتم لإخفاء الداخل المظلم
+    roughness: 0.05,
+    metalness: 0.85, // معدنية عالية ليعكس السماء
+    envMapIntensity: 2.0,
     side: THREE.DoubleSide,
   });
 
@@ -344,8 +344,15 @@ function applyArchitecturalMaterials(object) {
       child.material = matGlass;
     }
     // 9. إطارات النوافذ والأبواب والدرابزين الأسود
-    else if (meshName.includes("window") || meshName.includes("pvc") || meshName.includes("barierka") || meshName.includes("steel")) {
+    else if (meshName.startsWith("cube.008") || meshName.startsWith("rama") || meshName.startsWith("frame")) {
       child.material = matDarkFrame;
+    }
+    else if (meshName.startsWith("window") || meshName.startsWith("szyba") || meshName.includes("glass")) {
+      if (Array.isArray(child.material)) {
+        child.material = child.material.map(m => m.name.toLowerCase().includes("glass") ? matGlass : matDarkFrame);
+      } else {
+        child.material = (child.material.name || "").toLowerCase().includes("glass") ? matGlass : matDarkFrame;
+      }
     }
     // 10. الرصيف
     else if (meshName === "plane") {
