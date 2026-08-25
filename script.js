@@ -63,7 +63,7 @@ function initScene() {
 
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = 1.0;
 
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -78,12 +78,12 @@ function initScene() {
 /* ---------- 2) إضاءة الاستوديو المعمارية 360 درجة مع إضاءة خاصة للسطح ---------- */
 function setupLighting() {
   // 1. إضاءة القبة السماوية المتوازنة (Hemisphere Light)
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8294a5, 2.2);
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
   hemiLight.position.set(0, 60, 0);
   scene.add(hemiLight);
 
   // 2. ضوء الشمس الرئيسي من الأمام والأعلى مع الظلال الناعمة
-  const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
+  const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
   sunLight.position.set(32, 48, 28);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
@@ -99,27 +99,22 @@ function setupLighting() {
   scene.add(sunLight);
 
   // 3. ضوء خلفي رئيسي لإنارة الواجهة الخلفية
-  const backLight = new THREE.DirectionalLight(0xf4f8fd, 1.8);
+  const backLight = new THREE.DirectionalLight(0xf4f8fd, 0.5);
   backLight.position.set(-30, 42, -30);
   scene.add(backLight);
 
-  // 4. ضوء جانبي أيسر
-  const leftLight = new THREE.DirectionalLight(0xdde8f5, 1.3);
-  leftLight.position.set(-32, 28, 26);
-  scene.add(leftLight);
+  // 4. ضوء جانبي
+  const sideLight = new THREE.DirectionalLight(0xdde8f5, 0.3);
+  sideLight.position.set(-32, 28, 26);
+  scene.add(sideLight);
 
-  // 5. ضوء جانبي أيمن
-  const rightLight = new THREE.DirectionalLight(0xdde8f5, 1.3);
-  rightLight.position.set(32, 28, -26);
-  scene.add(rightLight);
-
-  // 6. ضوء علوي مباشر لإظهار كل تفاصيل السطح والمداخن والمواسير الفضية
-  const topLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  // 5. ضوء علوي مباشر
+  const topLight = new THREE.DirectionalLight(0xffffff, 0.4);
   topLight.position.set(0, 50, 0);
   scene.add(topLight);
 
-  // 7. إضاءة عامة ناعمة
-  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  // 6. إضاءة عامة ناعمة
+  const ambient = new THREE.AmbientLight(0xffffff, 0.3);
   scene.add(ambient);
 }
 
@@ -237,14 +232,14 @@ function applyArchitecturalMaterials(object) {
   });
 
   const matDarkBase = new THREE.MeshStandardMaterial({
-    color: 0x353b44, // رمادي داكن معماري
+    color: 0x22252a, // رمادي داكن جداً معماري
     roughness: 0.82,
     metalness: 0.04,
     side: THREE.DoubleSide,
   });
 
   const matAccentBand = new THREE.MeshStandardMaterial({
-    color: 0x363c46, // رمادي غامق لأشرطة النوافذ
+    color: 0x2a2e35, // رمادي غامق لأشرطة النوافذ
     roughness: 0.85,
     metalness: 0.02,
     side: THREE.DoubleSide,
