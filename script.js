@@ -7,8 +7,8 @@ import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
    ============================================================ */
 
 const CONFIG = {
-  modelPath: "Untitled.obj?v=13",
-  camera: { fov: 36, near: 0.1, far: 500 },
+  modelPath: "Untitled.obj?v=15",
+  camera: { fov: 45, near: 0.1, far: 5000 },
 };
 
 const DOM = {
