@@ -1,0 +1,287 @@
+:root {
+  --bg-1: #0f0c29;
+  --bg-2: #302b63;
+  --bg-3: #24243e;
+  --accent: #7c6cff;
+  --accent-2: #00d4ff;
+  --text: #eef0ff;
+  --text-dim: rgba(238, 240, 255, 0.65);
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --radius: 20px;
+  --font: "Cairo", system-ui, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font);
+  color: var(--text);
+  background: linear-gradient(135deg, var(--bg-1), var(--bg-2), var(--bg-3));
+}
+
+/* ---------- الخلفية المتحركة ---------- */
+.bg-gradient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.45;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+.blob-1 { width: 45vmax; height: 45vmax; background: #7c6cff; top: -15%; right: -10%; }
+.blob-2 { width: 38vmax; height: 38vmax; background: #00d4ff; bottom: -12%; left: -8%; animation-delay: -6s; }
+.blob-3 { width: 28vmax; height: 28vmax; background: #ff6ec4; bottom: 20%; right: 25%; animation-delay: -12s; }
+
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(6vmax, -4vmax) scale(1.15); }
+}
+
+/* ---------- الكانفس ---------- */
+#scene {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+/* ---------- Glassmorphism ---------- */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--glass-shadow);
+}
+
+.hidden { display: none !important; }
+
+/* ---------- شاشة التحميل ---------- */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 25, 0.75);
+  backdrop-filter: blur(10px);
+  transition: opacity 0.7s ease, visibility 0.7s ease;
+}
+.loader.done { opacity: 0; visibility: hidden; }
+
+.loader-card {
+  padding: 44px 52px;
+  text-align: center;
+  max-width: 420px;
+  width: calc(100% - 40px);
+  animation: floatCard 4s ease-in-out infinite;
+}
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+
+.loader-ring {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  position: relative;
+}
+.loader-ring span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-top-color: var(--accent);
+  border-left-color: var(--accent-2);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loader-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.loader-subtitle { color: var(--text-dim); font-size: 0.9rem; margin-top: 6px; }
+
+.progress-track {
+  margin-top: 24px;
+  height: 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.25s ease;
+}
+.progress-text { margin-top: 10px; font-size: 0.85rem; color: var(--text-dim); }
+
+.loader-error {
+  margin-top: 18px;
+  max-width: 420px;
+  padding: 18px 22px;
+  text-align: center;
+  border-color: rgba(255, 90, 90, 0.45);
+  background: rgba(255, 60, 60, 0.1);
+}
+.loader-error p { color: var(--text-dim); margin-top: 8px; font-size: 0.85rem; direction: ltr; }
+
+/* ---------- الشريط العلوي ---------- */
+.top-bar {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  left: 18px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 20px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, var(--accent));
+  box-shadow: 0 0 14px var(--accent);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.35); opacity: 0.7; }
+}
+.brand h2 { font-size: 1.05rem; font-weight: 700; }
+.brand small {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+.controls { display: flex; gap: 10px; }
+.btn-icon {
+  width: 42px; height: 42px;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.btn-icon:hover { background: rgba(255, 255, 255, 0.16); transform: translateY(-2px); }
+.btn-icon.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  box-shadow: 0 4px 18px rgba(124, 108, 255, 0.45);
+}
+
+/* ---------- بطاقة المعلومات ---------- */
+.info-card {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 10;
+  width: 280px;
+  padding: 20px 22px;
+}
+.info-card h3 { font-size: 0.95rem; margin-bottom: 12px; }
+.info-card ul { list-style: none; }
+.info-card li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 0.8rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+.info-card li span { color: var(--text-dim); }
+.hint { margin-top: 12px; font-size: 0.72rem; line-height: 1.8; color: var(--text-dim); }
+
+/* ---------- مؤشر FPS ---------- */
+.fps-chip {
+  position: fixed;
+  bottom: 18px;
+  left: 18px;
+  z-index: 10;
+  padding: 8px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 12px 26px;
+  font-size: 0.88rem;
+  animation: toastIn 0.35s ease;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, -14px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---------- Fade Animations ---------- */
+.fade-in {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+body.ready .fade-in { opacity: 1; transform: translateY(0); }
+.delay-1 { transition-delay: 0.15s; }
+.delay-2 { transition-delay: 0.3s; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  .top-bar { padding: 10px 14px; }
+  .brand h2 { font-size: 0.9rem; }
+  .btn-icon { width: 38px; height: 38px; font-size: 1rem; }
+  .info-card {
+    right: 12px; left: 12px;
+    bottom: 12px;
+    width: auto;
+    padding: 14px 16px;
+  }
+  .info-card h3 { display: none; }
+  .info-card li { padding: 4px 0; }
+  .hint { margin-top: 8px; }
+  .fps-chip { bottom: auto; top: 84px; left: 12px; padding: 6px 12px; }
+  .loader-card { padding: 32px 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

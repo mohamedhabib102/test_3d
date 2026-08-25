@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="عارض ثلاثي الأبعاد حديث لفيلا المناظر الطبيعية - Three.js" />
+  <title>Villa 3D Viewer | عارض الفيلا ثلاثي الأبعاد</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- شاشة التحميل -->
+  <div id="loader" class="loader" role="status" aria-live="polite">
+    <div class="loader-card glass">
+      <div class="loader-ring"><span></span></div>
+      <h1 class="loader-title">Villa 3D Viewer</h1>
+      <p class="loader-subtitle">جاري تحميل الموديل ثلاثي الأبعاد…</p>
+      <div class="progress-track">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+      <p id="progress-text" class="progress-text">0%</p>
+    </div>
+    <div id="loader-error" class="loader-error glass hidden">
+      <strong>⚠ تعذر تحميل الموديل</strong>
+      <p id="error-message"></p>
+    </div>
+  </div>
+
+  <!-- الخلفية المتدرجة -->
+  <div class="bg-gradient" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+  </div>
+
+  <!-- مشهد 3D -->
+  <canvas id="scene"></canvas>
+
+  <!-- البطاقة العائمة العلوية -->
+  <header class="top-bar glass fade-in">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <h2>Villa Landscape <small>3D Viewer</small></h2>
+    </div>
+    <nav class="controls">
+      <button id="btn-rotate" class="btn-icon active" title="تشغيل/إيقاف الدوران التلقائي" aria-pressed="true">
+        ⟳
+      </button>
+      <button id="btn-reset" class="btn-icon" title="إعادة الضبط">⌂</button>
+      <button id="btn-wireframe" class="btn-icon" title="وضع الهيكل السلكي" aria-pressed="false">◈</button>
+    </nav>
+  </header>
+
+  <!-- بطاقة المعلومات -->
+  <aside class="info-card glass fade-in delay-1">
+    <h3>معلومات الموديل</h3>
+    <ul>
+      <li><span>الاسم</span><strong>Villa Landscape</strong></li>
+      <li><span>الصيغة</span><strong>FBX 3D Model</strong></li>
+      <li><span>المحرك</span><strong>Three.js WebGL</strong></li>
+    </ul>
+    <p class="hint">اسحب للتدوير • عجلة الفأرة للتكبير • زر الفأرة الأيمن للتحريك</p>
+  </aside>
+
+  <!-- مؤشر الأداء -->
+  <footer class="fps-chip glass fade-in delay-2">
+    <span id="fps">-- FPS</span>
+  </footer>
+
+  <!-- رسالة الخطأ داخل الصفحة -->
+  <div id="toast" class="toast glass hidden"></div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script src="script.js" type="module"></script>
+</body>
+</html>
