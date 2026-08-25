@@ -11,11 +11,11 @@ import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
    ============================================================ */
 
 const CONFIG = {
-  glbPath: "Untitled.glb",
-  fallbackGlbPath: "Untitled(1).glb",
-  objPath: "Untitled.obj",
-  mtlPath: "Untitled.mtl",
-  fbxPath: "Untitled.fbx",
+  glbPath: "Untitled.glb?v=6",
+  fallbackGlbPath: "Untitled(1).glb?v=6",
+  objPath: "Untitled.obj?v=6",
+  mtlPath: "Untitled.mtl?v=6",
+  fbxPath: "Untitled.fbx?v=6",
   camera: { fov: 36, near: 0.1, far: 500 },
 };
 
@@ -202,9 +202,6 @@ function loadGLB(path = CONFIG.glbPath) {
   showLoader("جاري تحميل مجسم المبنى بصيغة GLB PBR…");
 
   const loader = new GLTFLoader();
-  const dracoLoader = new DRACOLoader();
-  dracoLoader.setDecoderPath("https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/");
-  loader.setDRACOLoader(dracoLoader);
 
   loader.load(
     path,
