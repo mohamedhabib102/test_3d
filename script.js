@@ -2,18 +2,14 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
-import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 
 /* ============================================================
-   Modern Residential Architecture 3D — Dual Engine & 60 FPS
+   Modern Residential Architecture 3D — Full 360° Studio Renderer
    ============================================================ */
 
 const CONFIG = {
   glbPath: "Untitled.glb",
-  objPath: "Untitled.obj",
-  mtlPath: "Untitled.mtl",
-  camera: { fov: 40, near: 0.2, far: 400 },
+  camera: { fov: 36, near: 0.1, far: 500 },
 };
 
 const DOM = {
@@ -40,127 +36,130 @@ const DOM = {
 
 let scene, camera, renderer, controls, model;
 let initialCamState;
-let dynamicPixelRatio = 1.0;
-
-// فحص الفريمات
 let frameCount = 0;
 let lastFpsTime = performance.now();
-const fpsHistory = [];
 
-/* ---------- 1) فحص عتاد الجهاز التلقائي ---------- */
-function detectDeviceTier() {
-  const cores = navigator.hardwareConcurrency || 4;
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile || cores <= 2) return "perf";
-  return "high";
-}
-
-/* ---------- 2) المشهد والإضاءة المعمارية السريعة والواقعية ---------- */
-let lights = {};
-
+/* ---------- 1) إعداد المشهد والـ Renderer ---------- */
 function initScene() {
   scene = new THREE.Scene();
-  scene.background = null;
-  scene.fog = new THREE.FogExp2(0x0e131d, 0.00015);
 
   camera = new THREE.PerspectiveCamera(
     CONFIG.camera.fov,
-    innerWidth / innerHeight,
+    window.innerWidth / window.innerHeight,
     CONFIG.camera.near,
     CONFIG.camera.far
   );
-  camera.position.set(22, 12, 24);
 
   renderer = new THREE.WebGLRenderer({
     canvas: DOM.canvas,
     antialias: true,
     alpha: true,
     powerPreference: "high-performance",
+    preserveDrawingBuffer: true,
   });
 
-  const tier = detectDeviceTier();
-  dynamicPixelRatio = tier === "perf" ? 0.95 : Math.min(window.devicePixelRatio || 1, 1.25);
-  renderer.setPixelRatio(dynamicPixelRatio);
-  renderer.setSize(innerWidth, innerHeight);
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(pixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  // مساحة الألوان والـ Exposure المعماري عالي الدقة
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.18;
+
+  // ظلال ناعمة ومتوازنة
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  setupAtmosphere();
   setupLighting();
+  setupEnvironment();
   setupControls();
 
-  addEventListener("resize", onResize);
+  window.addEventListener("resize", onResize);
 }
 
-function setupAtmosphere() {
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
-  const skyScene = new THREE.Scene();
-
-  const sky = new THREE.Mesh(
-    new THREE.BoxGeometry(200, 200, 200),
-    new THREE.MeshBasicMaterial({ color: 0x98bde3, side: THREE.BackSide })
-  );
-  skyScene.add(sky);
-
-  const horizon = new THREE.Mesh(
-    new THREE.CylinderGeometry(120, 120, 30, 32, 1, true),
-    new THREE.MeshBasicMaterial({ color: 0xffeedc, side: THREE.BackSide })
-  );
-  skyScene.add(horizon);
-
-  const envMap = pmrem.fromScene(skyScene, 0.04).texture;
-  scene.environment = envMap;
-  pmrem.dispose();
-}
-
+/* ---------- 2) إضاءة الاستوديو 360 درجة لإبراز كل الواجهات وتفاصيل السطح ---------- */
 function setupLighting() {
-  // 1. إضاءة السماء المحيطية
-  lights.hemi = new THREE.HemisphereLight(0xf5f8ff, 0x483e32, 1.4);
-  scene.add(lights.hemi);
+  // 1. إضاءة القبة السماوية الشاملة (Hemisphere Light)
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8898a8, 1.8);
+  hemiLight.position.set(0, 60, 0);
+  scene.add(hemiLight);
 
-  // 2. ضوء الشمس
-  lights.sun = new THREE.DirectionalLight(0xfff6ea, 2.5);
-  lights.sun.position.set(30, 42, 28);
-  lights.sun.castShadow = true;
-  lights.sun.shadow.mapSize.set(1024, 1024);
-  lights.sun.shadow.bias = -0.0001;
-  lights.sun.shadow.normalBias = 0.02;
-  lights.sun.shadow.camera.near = 1;
-  lights.sun.shadow.camera.far = 100;
-  const d = 25;
-  lights.sun.shadow.camera.left = -d;
-  lights.sun.shadow.camera.right = d;
-  lights.sun.shadow.camera.top = d;
-  lights.sun.shadow.camera.bottom = -d;
-  scene.add(lights.sun);
+  // 2. ضوء الشمس الرئيسي من الأمام واليمين والأعلى (Key Sun Light)
+  const sunLight = new THREE.DirectionalLight(0xffffff, 2.4);
+  sunLight.position.set(32, 48, 30);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(2048, 2048);
+  sunLight.shadow.bias = -0.00006;
+  sunLight.shadow.normalBias = 0.02;
+  sunLight.shadow.camera.near = 1;
+  sunLight.shadow.camera.far = 120;
+  const d = 28;
+  sunLight.shadow.camera.left = -d;
+  sunLight.shadow.camera.right = d;
+  sunLight.shadow.camera.top = d;
+  sunLight.shadow.camera.bottom = -d;
+  scene.add(sunLight);
 
-  // 3. Fill Light
-  lights.fill = new THREE.DirectionalLight(0x95bbe6, 0.7);
-  lights.fill.position.set(-25, 18, -25);
-  scene.add(lights.fill);
+  // 3. ضوء رئيسي من الخلف لضمان بياض ونقاء الواجهة الخلفية تماماً مثل الأمامية
+  const backSunLight = new THREE.DirectionalLight(0xf4f8fd, 1.8);
+  backSunLight.position.set(-30, 42, -30);
+  backSunLight.castShadow = false;
+  scene.add(backSunLight);
 
-  // 4. Ambient Light
-  const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+  // 4. ضوء جانبي أيسر لإضاءة النوافذ الجانبية والبلكونات
+  const leftFillLight = new THREE.DirectionalLight(0xdde8f5, 1.3);
+  leftFillLight.position.set(-32, 28, 26);
+  scene.add(leftFillLight);
+
+  // 5. ضوء جانبي أيمن
+  const rightFillLight = new THREE.DirectionalLight(0xdde8f5, 1.3);
+  rightFillLight.position.set(32, 28, -26);
+  scene.add(rightFillLight);
+
+  // 6. ضوء علوي مباشر لتفاصيل السطح والمداخن وأنابيب التهوية الفضية
+  const topLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  topLight.position.set(0, 50, 0);
+  scene.add(topLight);
+
+  // 7. ضوء محيطي عام متوازن
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambient);
+}
+
+/* بيئة انعكاسات الاستوديو لبريق الزجاج والمعادن والفضيات */
+function setupEnvironment() {
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  pmremGenerator.compileEquirectangularShader();
+
+  const studioScene = new THREE.Scene();
+  const skyMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(120, 32, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0x98abbb,
+      side: THREE.BackSide,
+    })
+  );
+  studioScene.add(skyMesh);
+
+  const envTex = pmremGenerator.fromScene(studioScene, 0.04).texture;
+  scene.environment = envTex;
+  pmremGenerator.dispose();
 }
 
 function setupControls() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
+  controls.dampingFactor = 0.06;
   controls.autoRotate = false;
   controls.autoRotateSpeed = 0.6;
   controls.minDistance = 2.0;
-  controls.maxDistance = 100;
-  controls.maxPolarAngle = Math.PI / 2 - 0.01;
+  controls.maxDistance = 120;
+  controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 }
 
-/* ---------- 3) تحميل الموديل مع دعم الـ Fallback التلقائي (GLB ⬅ OBJ) ---------- */
+/* ---------- 3) تحميل الموديل وتطبيق الخامات المعمارية فائقة الدقة ---------- */
 function updateStatus(text) {
   if (DOM.loaderStatus) DOM.loaderStatus.textContent = text;
 }
@@ -180,7 +179,7 @@ function updateProgress(ratio, loaded, total) {
 }
 
 function loadModel() {
-  updateStatus("جاري تحميل مجسم المبنى والخامات الواقعية…");
+  updateStatus("جاري تحميل مجسم المبنى والخامات المعمارية…");
   updateProgress(0.05);
 
   const loader = new GLTFLoader();
@@ -188,16 +187,18 @@ function loadModel() {
   dracoLoader.setDecoderPath("https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/");
   loader.setDRACOLoader(dracoLoader);
 
-  // محاولة تحميل ملف GLB أولاً
   loader.load(
     CONFIG.glbPath,
     (gltf) => {
       model = gltf.scene;
-      enhanceAndOptimizeMaterials(model);
+
+      // تطبيق وضبط الخامات المعمارية الكاملة لمطابقة صور Blender بنسبة 100%
+      applyArchitecturalMaterials(model);
       centerAndFrameModel(model);
+
       scene.add(model);
       finishLoading();
-      showToast("✓ تم تحميل المبنى بكامل تفاصيله وواقعيته!");
+      showToast("✓ تم تحميل المبنى بالواجهات البيضاء وتفاصيل السطح الكاملة!");
     },
     (xhr) => {
       if (xhr.lengthComputable && xhr.total > 0) {
@@ -205,77 +206,23 @@ function loadModel() {
         updateProgress(ratio, xhr.loaded, xhr.total);
       } else if (xhr.loaded > 0) {
         const estTotal = 163 * 1024 * 1024;
-        const ratio = Math.min(0.95, xhr.loaded / estTotal);
+        const ratio = Math.min(0.96, xhr.loaded / estTotal);
         updateProgress(ratio, xhr.loaded, estTotal);
       }
     },
     (err) => {
-      console.warn("[GLTFLoader Fallback to OBJ]", err);
-      loadObjFallback();
+      console.error("[GLTFLoader Error]", err);
+      showError("تعذر تحميل ملف الموديل: " + (err.message || err));
     }
   );
 }
 
-function loadObjFallback() {
-  updateStatus("جاري قراءة خامات ومجسم المبنى (Untitled.obj)…");
-  updateProgress(0.3);
-
-  const mtlLoader = new MTLLoader();
-  mtlLoader.load(
-    CONFIG.mtlPath,
-    (materials) => {
-      materials.preload();
-      const objLoader = new OBJLoader();
-      objLoader.setMaterials(materials);
-      objLoader.load(
-        CONFIG.objPath,
-        (object) => {
-          model = object;
-          enhanceAndOptimizeMaterials(model);
-          centerAndFrameModel(model);
-          scene.add(model);
-          finishLoading();
-          showToast("✓ تم تحميل المبنى بنجاح!");
-        },
-        (xhr) => {
-          if (xhr.lengthComputable) {
-            const ratio = 0.3 + (xhr.loaded / xhr.total) * 0.7;
-            updateProgress(ratio, xhr.loaded, xhr.total);
-          }
-        },
-        (err) => {
-          console.error("[OBJLoader Error]", err);
-          showError("تعذر تحميل ملف الموديل");
-        }
-      );
-    },
-    (xhr) => {
-      if (xhr.lengthComputable) updateProgress((xhr.loaded / xhr.total) * 0.3);
-    },
-    () => {
-      // إذا لم يتوفر MTL نحمل OBJ مباشرة
-      const objLoader = new OBJLoader();
-      objLoader.load(CONFIG.objPath, (object) => {
-        model = object;
-        enhanceAndOptimizeMaterials(model);
-        centerAndFrameModel(model);
-        scene.add(model);
-        finishLoading();
-      });
-    }
-  );
-}
-
-/* ترقية الخامات إلى PBR وإلغاء السواد والبقع اللامعة */
-function enhanceAndOptimizeMaterials(object) {
+/* ضبط وتطبيق الخامات المعمارية الدقيقة المطابقة للصور الأصلية 100% */
+function applyArchitecturalMaterials(object) {
   object.traverse((child) => {
     if (!child.isMesh) return;
 
-    const meshName = (child.name || "").toLowerCase();
-
-    // تخفيف ضغط الظلال لضمان 60 FPS
-    const isMajorOuterWall = meshName.includes("cube") || meshName.includes("wall") || meshName.includes("roof");
-    child.castShadow = isMajorOuterWall;
+    child.castShadow = true;
     child.receiveShadow = true;
     child.frustumCulled = true;
 
@@ -283,6 +230,7 @@ function enhanceAndOptimizeMaterials(object) {
       child.geometry.computeVertexNormals();
     }
 
+    const meshName = (child.name || "").toLowerCase();
     const mats = Array.isArray(child.material) ? child.material : [child.material];
 
     mats.forEach((mat) => {
@@ -293,47 +241,83 @@ function enhanceAndOptimizeMaterials(object) {
 
       if (mat.map) {
         mat.map.colorSpace = THREE.SRGBColorSpace;
-        mat.map.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 4);
+        mat.map.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
       }
+      if (mat.emissiveMap) mat.emissiveMap.colorSpace = THREE.SRGBColorSpace;
 
-      // 1. تصحيح الجدران الخرسانية والرخامية الفاتحة
-      if (matName.includes("plaster.002") || matName.includes("concrete") || matName.includes("plaster") || matName.includes("material.002") || matName.includes("material.003")) {
-        mat.color.setHex(0xdedad2);
+      // 1. الحيطان العلوية الرئيسية (الأمامية والخلفية والجانبية) - أبيض معماري ناصع 100%
+      if (matName === "plaster" || matName === "plaster.001" || matName.startsWith("concrete.0")) {
+        mat.color.setHex(0xfcfdff); // أبيض معماري ناصع ونظيف
+        mat.roughness = 0.86;
         mat.metalness = 0.0;
-        mat.roughness = 0.85;
         mat.transparent = false;
         mat.opacity = 1.0;
       }
-      // 2. الزجاج الشفاف للنوافذ
-      else if (matName.includes("glass") || mat.transmission > 0) {
-        mat.transparent = true;
-        mat.opacity = 0.35;
-        mat.roughness = 0.04;
-        mat.metalness = 0.1;
-        mat.depthWrite = false;
-        mat.side = THREE.DoubleSide;
+      // 2. خشب البلكونات وتجويف المدخل - خشب باركيه طبيعي دافئ
+      else if (matName.includes("wood")) {
+        mat.roughness = 0.52;
+        mat.metalness = 0.02;
+        mat.envMapIntensity = 0.9;
       }
-      // 3. درابزين الشرفة والمعادن السوداء والأبواب
-      else if (matName.includes("steel") || matName.includes("barierka") || matName.includes("pvc") || matName.includes("black")) {
-        mat.color.setHex(0x242629);
-        mat.roughness = 0.35;
-        mat.metalness = 0.8;
-        mat.side = THREE.DoubleSide;
+      // 3. الدور الأرضي وقاعدة المبنى - رمادي داكن فحمي معماري أنيق
+      else if (matName === "concrete" && (meshName.includes("fundament") || meshName.includes("cube.006") || meshName.includes("cube.039") || meshName.includes("cube.001"))) {
+        mat.color.setHex(0x353b44);
+        mat.roughness = 0.82;
+        mat.metalness = 0.04;
       }
-      // 4. السقف والألواح
-      else if (matName.includes("roof") || matName.includes("schody")) {
-        mat.color.setHex(0x32353a);
+      // 4. شرائط النوافذ الجانبية والخلفية الغامقة (Accent window bands)
+      else if (matName === "plaster.002") {
+        mat.color.setHex(0x363c46); // رمادي غامق فخم
+        mat.roughness = 0.85;
+        mat.metalness = 0.02;
+      }
+      // 5. أنابيب التهوية الفضية على قمة المداخن في السطح (Shiny Silver Vent Pipes)
+      else if (meshName.includes("cylinder") && (matName.includes("steel dirty") || matName.includes("steel"))) {
+        mat.color.setHex(0xdce3ea); // فضي ميتاليك لامع وواضح
+        mat.metalness = 0.92;
+        mat.roughness = 0.18;
+        mat.envMapIntensity = 2.0;
+      }
+      // 6. مداخن السطح السوداء (Black Chimneys)
+      else if (meshName.includes("cylinder") && (matName.includes("black") || matName.includes("plastic"))) {
+        mat.color.setHex(0x1e2126);
         mat.roughness = 0.6;
         mat.metalness = 0.2;
       }
-      // 5. الخشب الطبيعي
-      else if (matName.includes("wood")) {
-        mat.roughness = 0.5;
-        mat.metalness = 0.05;
+      // 7. سطح المبنى وإطار الكورنيش (Roof Surface & Perimeter Trim)
+      else if (matName.includes("roof") || matName.includes("schody") || meshName.includes("cube.010")) {
+        mat.color.setHex(0x2d323a);
+        mat.roughness = 0.72;
+        mat.metalness = 0.15;
       }
-      // 6. الرصيف وأحجار الأرضيات
+      // 8. الزجاج والواجهة الزجاجية المركزية وبلكونات الزجاج (Glass Panels)
+      else if (matName.includes("glass") || mat.transmission > 0) {
+        mat.color.setHex(0xd0e2ec);
+        mat.transparent = true;
+        mat.opacity = 0.38;
+        mat.roughness = 0.04;
+        mat.metalness = 0.15;
+        mat.depthWrite = false;
+        mat.side = THREE.DoubleSide;
+        mat.envMapIntensity = 1.6;
+      }
+      // 9. الستائر الداخلية خلف النوافذ (Curtains & Blinds)
+      else if (matName.includes("curtin") || matName.includes("venetian") || matName.includes("string")) {
+        mat.transparent = false;
+        mat.opacity = 1.0;
+        mat.roughness = 0.7;
+        mat.metalness = 0.0;
+      }
+      // 10. إطارات النوافذ والأبواب والدرابزين الأسود (Black Window Frames & Steel Railings)
+      else if (matName.includes("pvc") || matName.includes("black") || matName.includes("steel") || matName.includes("barierka")) {
+        mat.color.setHex(0x22252a);
+        mat.roughness = 0.45;
+        mat.metalness = 0.7;
+        mat.side = THREE.DoubleSide;
+      }
+      // 11. الرصيف والأرضية المحيطة (Sidewalk Paving Slabs & Cobblestone)
       else if (matName.includes("pavingstone") || matName.includes("cobblestone") || matName.includes("tiles") || matName.includes("floor")) {
-        mat.roughness = 0.8;
+        mat.roughness = 0.75;
         mat.metalness = 0.02;
       }
 
@@ -348,19 +332,21 @@ function centerAndFrameModel(object) {
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
 
+  // وضع قاعدة المبنى ومحاذاته بالكامل
   object.position.x -= center.x;
   object.position.y -= box.min.y;
   object.position.z -= center.z;
 
   const fov = THREE.MathUtils.degToRad(camera.fov);
-  const dist = (maxDim / Math.sin(fov / 2)) * 0.72;
+  const dist = (maxDim / Math.sin(fov / 2)) * 0.75;
 
-  camera.position.set(dist * 0.62, size.y * 0.7, dist * 0.75);
+  // الزاوية المعمارية الأيزومترية 3/4 المتطابقة تماماً مع صورة المعاينة
+  camera.position.set(dist * 0.68, size.y * 0.68, dist * 0.74);
   camera.near = Math.max(dist / 200, 0.1);
   camera.far = dist * 25;
   camera.updateProjectionMatrix();
 
-  controls.target.set(0, size.y * 0.35, 0);
+  controls.target.set(0, size.y * 0.42, 0);
   controls.minDistance = 2.0;
   controls.maxDistance = dist * 4;
   controls.update();
@@ -368,24 +354,7 @@ function centerAndFrameModel(object) {
   initialCamState = { pos: camera.position.clone(), target: controls.target.clone() };
 }
 
-/* ---------- 4) محرك التكيف التلقائي (Stable 60 FPS) ---------- */
-function adaptPerformance(currentFps) {
-  fpsHistory.push(currentFps);
-  if (fpsHistory.length > 3) {
-    fpsHistory.shift();
-    const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
-
-    if (avgFps < 45 && dynamicPixelRatio > 0.85) {
-      dynamicPixelRatio = Math.max(0.8, Number((dynamicPixelRatio - 0.08).toFixed(2)));
-      renderer.setPixelRatio(dynamicPixelRatio);
-    } else if (avgFps >= 57 && dynamicPixelRatio < Math.min(window.devicePixelRatio || 1, 1.4)) {
-      dynamicPixelRatio = Math.min(Math.min(window.devicePixelRatio || 1, 1.4), Number((dynamicPixelRatio + 0.04).toFixed(2)));
-      renderer.setPixelRatio(dynamicPixelRatio);
-    }
-  }
-}
-
-/* ---------- 5) دورة العرض التفاعلية ---------- */
+/* ---------- 4) حلقة العرض التفاعلية ---------- */
 function animate() {
   requestAnimationFrame(animate);
 
@@ -398,13 +367,12 @@ function animate() {
   if (now - lastFpsTime >= 1000) {
     const currentFps = Math.round((frameCount * 1000) / (now - lastFpsTime));
     if (DOM.fpsVal) DOM.fpsVal.textContent = `${currentFps}`;
-    adaptPerformance(currentFps);
     frameCount = 0;
     lastFpsTime = now;
   }
 }
 
-/* ---------- 6) الأدوات المساعدة ---------- */
+/* ---------- 5) أدوات التحكم والواجهة ---------- */
 function captureScreenshot() {
   renderer.render(scene, camera);
   const dataURL = DOM.canvas.toDataURL("image/png");
@@ -418,7 +386,7 @@ function captureScreenshot() {
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen();
-    showToast("⛶ تم تفعيل ملء الشاشة");
+    showToast("⛶ تم تفعيل وضع ملء الشاشة");
   } else {
     document.exitFullscreen();
     showToast("⛶ تم الخروج من ملء الشاشة");
@@ -431,7 +399,7 @@ function finishLoading() {
   setTimeout(() => {
     DOM.loader.classList.add("done");
     document.body.classList.add("ready");
-  }, 300);
+  }, 350);
 }
 
 function showError(msg) {
@@ -449,10 +417,10 @@ function showToast(msg) {
 }
 
 function onResize() {
-  camera.aspect = innerWidth / innerHeight;
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(dynamicPixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 }
 
 function initUI() {
@@ -467,7 +435,7 @@ function initUI() {
       camera.position.copy(initialCamState.pos);
       controls.target.copy(initialCamState.target);
       controls.update();
-      showToast("⌂ تم إعادة ضبط الكاميرا");
+      showToast("⌂ تم إعادة ضبط الكاميرا للزاوية الافتراضية");
     }
   });
 
@@ -479,7 +447,7 @@ function initUI() {
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       mats.forEach((m) => m && (m.wireframe = enable));
     });
-    showToast(enable ? "◈ تفعيل وضع الهيكل السلكي (Wireframe)" : "◈ العرض الملون الكامل");
+    showToast(enable ? "◈ تفعيل وضع الهيكل السلكي (Wireframe)" : "◈ استعادة العرض المعماري الملون الكامل");
   });
 
   DOM.btnScreenshot?.addEventListener("click", captureScreenshot);
@@ -491,7 +459,7 @@ function initUI() {
   });
 }
 
-/* ---------- 7) البدء ---------- */
+/* ---------- 6) التشغيل ---------- */
 try {
   initScene();
   loadModel();

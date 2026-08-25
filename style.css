@@ -24,28 +24,28 @@ html, body {
   overflow: hidden;
   font-family: var(--font);
   color: var(--text);
-  background: #0d1117;
+  background: #6d8090;
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* ---------- خلفية الإضاءة المعمارية ---------- */
+/* ---------- خلفية الاستوديو المعماري الواقعي ---------- */
 .sky-backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
   overflow: hidden;
-  background: radial-gradient(circle at 65% 25%, #1e293b 0%, #0f172a 55%, #080d1a 100%);
+  background: linear-gradient(180deg, #7c90a1 0%, #9cb1c2 42%, #687a89 100%);
 }
 
 .light-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(110px);
-  opacity: 0.25;
+  filter: blur(120px);
+  opacity: 0.15;
 }
-.glow-1 { width: 50vmax; height: 50vmax; background: #38bdf8; top: -20%; right: -10%; }
-.glow-2 { width: 45vmax; height: 45vmax; background: #6366f1; bottom: -15%; left: -10%; }
+.glow-1 { width: 50vmax; height: 50vmax; background: #c5d8ea; top: -20%; right: 10%; }
+.glow-2 { width: 45vmax; height: 45vmax; background: #889fb3; bottom: -15%; left: 10%; }
 
 /* ---------- 3D Canvas ---------- */
 #scene {
