@@ -1,4 +1,4 @@
-﻿import * as THREE from "three";
+import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 
@@ -43,15 +43,15 @@ function initScene() {
     antialias: true,
     alpha: true,
     powerPreference: "high-performance",
-    logarithmicDepthBuffer: true,
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  // تحديد Pixel Ratio بحد أقصى 1.5 لضمان 60 FPS سلس حتى على كروت الشاشة المدمجة
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(innerWidth, innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
 
   setupEnvironment();
   setupLights();
@@ -61,10 +61,14 @@ function initScene() {
   addEventListener("resize", onResize);
 }
 
-/* إضاءة بيئية PBR حتى لو التكسترات ناقصة تفضل الشكل واقعي */
+/* إضاءة بيئية PBR واقعية محسنة للأداء */
 function setupEnvironment() {
   const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironmentLite(), 0.04);
+  pmrem.compileEquirectangularShader();
+  const roomEnv = new RoomEnvironmentLite();
+  const envMap = pmrem.fromScene(roomEnv, 0.04).texture;
+  scene.environment = envMap;
+  pmrem.dispose();
 }
 
 class RoomEnvironmentLite extends THREE.Scene {
@@ -84,26 +88,34 @@ class RoomEnvironmentLite extends THREE.Scene {
 }
 
 function setupLights() {
-  scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x40384f, 0.7));
+  scene.add(new THREE.HemisphereLight(0xe8f0ff, 0x3b3345, 0.8));
 
-  const sun = new THREE.DirectionalLight(0xfff2d9, 2.0);
-  sun.position.set(120, 180, 90);
+  const sun = new THREE.DirectionalLight(0xfff5e6, 2.2);
+  sun.position.set(100, 150, 80);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.bias = -0.0005;
-  sun.shadow.normalBias = 0.5; // يمنع الارتعاش (shadow acne)
+  sun.shadow.mapSize.set(1024, 1024); // حجم ظلال متوازن وعالي الأداء
+  sun.shadow.bias = -0.0003;
+  sun.shadow.normalBias = 0.02;
+  sun.shadow.camera.near = 10;
+  sun.shadow.camera.far = 500;
+  const d = 80;
+  sun.shadow.camera.left = -d;
+  sun.shadow.camera.right = d;
+  sun.shadow.camera.top = d;
+  sun.shadow.camera.bottom = -d;
   scene.add(sun);
 
-  const fill = new THREE.DirectionalLight(0x8899ff, 0.35);
-  fill.position.set(-90, 50, -110);
+  const fill = new THREE.DirectionalLight(0x88aaff, 0.4);
+  fill.position.set(-80, 40, -100);
   scene.add(fill);
 
-  // أرضية شفافة لاستقبال الظل فقط
+  // أرضية ظل شفافة
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(4000, 4000),
-    new THREE.ShadowMaterial({ opacity: 0.25 })
+    new THREE.PlaneGeometry(2000, 2000),
+    new THREE.ShadowMaterial({ opacity: 0.22 })
   );
   ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.05;
   ground.receiveShadow = true;
   scene.add(ground);
 }
@@ -179,12 +191,15 @@ function prepareModel(object) {
     _currentChild = child;
     child.castShadow = true;
     child.receiveShadow = true;
-    child.frustumCulled = false;
+    child.frustumCulled = true; // تفعيل culling لتسريع الرسم وتجاهل الأجزاء خارج مجال الرؤية
+
+    if (child.geometry && !child.geometry.attributes.normal) {
+      child.geometry.computeVertexNormals();
+    }
 
     const mats = Array.isArray(child.material) ? child.material : [child.material];
     mats.forEach((mat) => {
       if (!mat) return;
-      // DoubleSide عشان لما تدخل جوه البيت الحيطان تفضل باينة
       mat.side = THREE.DoubleSide;
 
       if (mat.map && mat.map.image === undefined) {
@@ -200,7 +215,6 @@ function prepareModel(object) {
           }
           if (match.metalness && "metalness" in mat) mat.metalness = 0.8;
         } else if (mat.color.getHex() === 0xffffff) {
-          // مادة من غير اسم واضح → بيج معماري محايد
           mat.color.setHex(0xcac3b6);
         }
       }
