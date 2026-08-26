@@ -1,0 +1,153 @@
+function applyArchitecturalMaterials(object) {
+  // خامات مسبقة الصنع فائقة الدقة
+  const matWhiteWall = new THREE.MeshStandardMaterial({
+    color: 0xeef1f4, // أبيض واقعي ناعم
+    roughness: 0.88,
+    metalness: 0.0,
+    side: THREE.DoubleSide,
+  });
+
+  const matWoodBalcony = new THREE.MeshStandardMaterial({
+    color: 0xc4975e, // خشب طبيعي دافئ
+    roughness: 0.52,
+    metalness: 0.02,
+    side: THREE.DoubleSide,
+  });
+
+  const matDarkBase = new THREE.MeshStandardMaterial({
+    color: 0x22252a, // رمادي داكن جداً معماري
+    roughness: 0.82,
+    metalness: 0.04,
+    side: THREE.DoubleSide,
+  });
+
+  const matAccentBand = new THREE.MeshStandardMaterial({
+    color: 0x2a2e35, // رمادي غامق لأشرطة النوافذ
+    roughness: 0.85,
+    metalness: 0.02,
+    side: THREE.DoubleSide,
+  });
+
+  const matRoofSurface = new THREE.MeshStandardMaterial({
+    color: 0x2e333b, // رمادي السطح والكورنيش
+    roughness: 0.72,
+    metalness: 0.15,
+    side: THREE.DoubleSide,
+  });
+
+  const matSilverPipes = new THREE.MeshStandardMaterial({
+    color: 0xffffee,
+    emissive: 0xffcc88,
+    emissiveIntensity: 1.0,
+    metalness: 0.1,
+    roughness: 0.2,
+    side: THREE.DoubleSide,
+  });
+
+  const matBlackChimney = new THREE.MeshStandardMaterial({
+    color: 0x20242a, // أسود مطفي للمداخن
+    roughness: 0.55,
+    metalness: 0.2,
+    side: THREE.DoubleSide,
+  });
+
+  const matGlass = new THREE.MeshStandardMaterial({
+    color: 0x4a6a82, // لون زجاج أزرق رمادي نهاري
+    roughness: 0.15,
+    metalness: 0.75, // يعكس السماء بشكل ناعم
+    envMapIntensity: 1.5,
+    side: THREE.DoubleSide,
+  });
+
+  const matDarkFrame = new THREE.MeshStandardMaterial({
+    color: 0x3d444e, // رمادي معدني إطارات
+    roughness: 0.5,
+    metalness: 0.6,
+    side: THREE.DoubleSide,
+  });
+
+  const matSidewalk = new THREE.MeshStandardMaterial({
+    color: 0xcfc8ba,
+    roughness: 0.78,
+    metalness: 0.02,
+    side: THREE.DoubleSide,
+  });
+
+  object.traverse((child) => {
+    if (!child.isMesh) return;
+
+    const meshName = (child.name || "").toLowerCase();
+
+    // 1. إخفاء خيوط الستائر والستائر لمنع خطوط الوايرفريم
+    if (meshName.startsWith("string") || meshName.startsWith("venetian") || meshName.includes("string") || meshName.startsWith("plane.00") || meshName.startsWith("plane.010") || meshName.startsWith("plane.014") || meshName.startsWith("plane.015") || meshName.startsWith("plane.016") || meshName.startsWith("plane.017")) {
+      child.visible = false;
+      return;
+    }
+
+    child.castShadow = true;
+    child.receiveShadow = true;
+    child.frustumCulled = true;
+
+    // 2. الجدران الرئيسية (الأدوار العلوية) - مصفوفة الخامات الأربعة
+    if (meshName === "walls") {
+      child.material = [
+        matWhiteWall,    // 0: PLASTER (الحيطان البيضاء)
+        matWhiteWall,    // 1: PLASTER.001 (حوائط الشبابيك البيضاء)
+        matWoodBalcony,  // 2: WOOD.001 (خشب البلكونات)
+        matSidewalk      // 3: tiles (أرضية البلكونات)
+      ];
+    }
+    // 3. الدور الأرضي والأساسات
+    else if (meshName === "fundament") {
+      child.material = [
+        matDarkBase,     // 0: Concrete (الرمادي الداكن)
+        matDarkBase,     // 1: floor
+        matSidewalk      // 2: tiles
+      ];
+    }
+    // 4. أشرطة النوافذ الغامقة
+    else if (meshName === "cube.003" || meshName === "cube.005" || meshName === "cube.017" || meshName === "cube.018") {
+      child.material = matAccentBand;
+    }
+    // 5. أنابيب التهوية الفضية بالسطح
+    else if (meshName.includes("cylinder.004") || meshName.includes("cylinder.005") || meshName.includes("cylinder.006") || meshName.includes("cylinder.007") || meshName.includes("cylinder.001") || meshName.includes("cylinder.002") || meshName.includes("cylinder.003") || meshName === "cylinder") {
+      child.material = matSilverPipes;
+    }
+    // 6. المداخن الثلاثة بالسطح
+    else if (meshName.includes("cylinder.008") || meshName.includes("cylinder.010") || meshName.includes("cylinder.011") || meshName.includes("cylinder.012") || meshName.includes("cylinder.020") || meshName.includes("cylinder.022") || meshName.includes("cylinder.023") || meshName.includes("cylinder.024")) {
+      child.material = matBlackChimney;
+    }
+    // 7. سطح المبنى وكورنيش السطح
+    else if (meshName.includes("cube.010") || meshName.includes("cube.021") || meshName.includes("schody")) {
+      child.material = matRoofSurface;
+    }
+    // 8. الزجاج
+    else if (meshName.includes("barierka.012") || meshName.includes("barierka.013") || meshName.includes("barierka.014") || meshName.includes("barierka.015") || meshName.includes("barierka.016") || meshName.includes("barierka.017") || meshName.includes("barierka.018") || meshName.includes("barierka.019") || meshName.includes("barierka.020") || meshName.includes("barierka.021") || meshName.includes("barierka.022") || meshName.includes("barierka.023")) {
+      child.material = matGlass;
+    }
+    // 9. إطارات النوافذ والأبواب والدرابزين الأسود
+    else if (meshName.startsWith("cube.008") || meshName.startsWith("rama") || meshName.startsWith("frame")) {
+      child.material = matDarkFrame;
+    }
+    else if (meshName.startsWith("window") || meshName.startsWith("szyba") || meshName.includes("glass")) {
+      if (Array.isArray(child.material)) {
+        child.material = child.material.map(m => m.name.toLowerCase().includes("glass") ? matGlass : matDarkFrame);
+      } else {
+        child.material = (child.material.name || "").toLowerCase().includes("glass") ? matGlass : matDarkFrame;
+      }
+    }
+    // 10. الرصيف
+    else if (meshName === "plane") {
+      child.material = matSidewalk;
+    }
+    // 11. باقي الجدران والعناصر العلوية
+    else if (meshName.startsWith("cube.04") || meshName.startsWith("cube.05")) {
+      child.material = matWhiteWall;
+    }
+    else {
+      child.material = matWhiteWall;
+    }
+  });
+}
+
+function centerAndFrameModel

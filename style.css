@@ -194,6 +194,54 @@ html, body {
   border-radius: var(--radius-lg);
 }
 
+/* Time of Day Switcher */
+.tod-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  border-radius: 99px;
+  border: 1px solid var(--glass-border);
+}
+.btn-tod {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 99px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.25s ease;
+}
+.btn-tod:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+.btn-tod.active {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.6);
+}
+.btn-tod.active.tod-day {
+  background: #0284c7;
+  box-shadow: 0 0 12px rgba(2, 132, 199, 0.7);
+}
+.btn-tod.active.tod-sunset {
+  background: #ea580c;
+  box-shadow: 0 0 14px rgba(234, 88, 12, 0.7);
+}
+.btn-tod.active.tod-night {
+  background: #6366f1;
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.7);
+}
+
+
 .brand {
   display: flex;
   align-items: center;

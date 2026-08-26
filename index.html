@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=16" />
+  <link rel="stylesheet" href="style.css?v=20" />
 </head>
 <body>
 
@@ -31,7 +31,7 @@
         <span id="progress-text" class="progress-text">0%</span>
         <span id="progress-detail" class="progress-detail">جاري المعالجة…</span>
       </div>
-      <div class="loader-badge" id="loader-tier-badge">⚡ تكيف تلقائي وسلس (60 FPS)</div>
+      <div class="loader-badge" id="loader-tier-badge">⚡ إضاءة PBR وشجر واقعي (60 FPS)</div>
     </div>
     <div id="loader-error" class="loader-error glass hidden">
       <strong>⚠ تعذر تحميل الموديل</strong>
@@ -53,13 +53,23 @@
     <div class="brand">
       <span class="brand-dot"></span>
       <div>
-        <h2>Modern Residential Architecture <span class="badge-tag">PBR واقعي</span></h2>
-        <small>معاينة تفاعلية معمارية ثلاثية الأبعاد</small>
+        <h2>Modern Residential Architecture <span class="badge-tag">PBR واقعي فائق</span></h2>
+        <small>معاينة تفاعلية معمارية ثلاثية الأبعاد • إضاءة وشبابيك وشجر واقعي</small>
       </div>
+    </div>
+
+    <!-- مبدل أوقات اليوم والإضاءة -->
+    <div class="tod-controls" role="group" aria-label="أوقات الإضاءة">
+      <button id="tod-day" class="btn-tod tod-day active" title="وضع النهار المشمس">☀️ نهار</button>
+      <button id="tod-sunset" class="btn-tod tod-sunset" title="وضع الغروب الذهبي">🌇 غروب</button>
+      <button id="tod-night" class="btn-tod tod-night" title="وضع الليل والإنارة">🌙 ليل</button>
     </div>
 
     <!-- أدوات التحكم الأساسية -->
     <div class="quick-tools">
+      <button id="btn-lights" class="btn-icon active" title="تشغيل/إطفاء إنارة الشبابيك">
+        <span>💡</span>
+      </button>
       <button id="btn-rotate" class="btn-icon" title="تشغيل/إيقاف الدوران التلقائي" aria-pressed="false">
         <span>⟳</span>
       </button>
@@ -92,6 +102,7 @@
         <li><span>نوع العقار</span><strong>مبنى سكني عصري فاخر</strong></li>
         <li><span>التفاصيل الهندسية</span><strong>4 طوابق + شرفات وتراس</strong></li>
         <li><span>الخامات المطبقة</span><strong>خرسانة معمارية، خشب طبيعي، زجاج PBR</strong></li>
+        <li><span>الإنارة والشجر</span><strong>شبابيك ذكية منورة وشجر طبيعي</strong></li>
         <li><span>الأداء والسلاسة</span><strong class="text-accent">ثابت 60 FPS (تكيف تلقائي)</strong></li>
       </ul>
       <div class="download-section">
@@ -104,7 +115,7 @@
         </div>
       </div>
       <div class="quick-hints">
-        <span>🖱 اسحب بالماوس للتدوير • عجلة الفأرة للتقريب • الزر الأيمن للتحريك</span>
+        <span>🖱 اسحب بالماوس للتدوير • عجلة الفأرة للتقريب • انقر مرتين للتركيز</span>
       </div>
     </div>
   </aside>
@@ -129,6 +140,6 @@
     }
   }
   </script>
-  <script src="script.js?v=16" type="module"></script>
+  <script src="script.js?v=50" type="module"></script>
 </body>
 </html>
